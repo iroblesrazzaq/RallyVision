@@ -5,6 +5,8 @@ import math
 import cv2
 import numpy as np
 import os
+import math
+
 # %%
 def main():
     # cell 1: get image 1 minute in - in prod have to make sure nothing is covering doubles lines at that point (players)
@@ -133,6 +135,14 @@ def main():
 
             for line in linesP:
                 x1, y1, x2, y2 = line[0]
+                
+                # --- NEW: Write the endpoint coordinates onto the image ---
+                coord_font_scale = 0.4 # Use a slightly smaller font for coordinates
+                cv2.putText(colored_lines_image, f'({x1},{y1})', (x1, y1 - 10), font, 
+                            coord_font_scale, font_color, font_thickness, cv2.LINE_AA)
+                cv2.putText(colored_lines_image, f'({x2},{y2})', (x2, y2 - 10), font, 
+                            coord_font_scale, font_color, font_thickness, cv2.LINE_AA)
+
                 # Calculate the line's original angle and its midpoint
                 _, angle_deg = get_polar_angle(line[0])
                 mid_x = (x1 + x2) / 2
@@ -141,13 +151,13 @@ def main():
                 # Normalize the angle to a [0, 180) degree range
                 normalized_angle = int(angle_deg % 180)
 
-                # --- NEW: Determine if the line is on the Left or Right side ---
+                # Determine if the line is on the Left or Right side
                 side_label = "L" if mid_x < screen_center_x else "R"
 
                 # Default color is gray
                 color = (128, 128, 182)  # BGR: Gray
 
-                # --- Updated classification using normalized angle AND side label ---
+                # Updated classification using normalized angle AND side label
                 if normalized_angle < 15 or normalized_angle > 165: # Horizontal
                     color = (0, 255, 0)        # BGR: Green
                 elif 75 < normalized_angle < 105: # Vertical
@@ -162,7 +172,7 @@ def main():
                 # Draw the line with the determined color
                 cv2.line(colored_lines_image, (x1, y1), (x2, y2), color, 2, cv2.LINE_AA)
 
-                # --- UPDATED: Display the angle AND the side label ---
+                # Display the angle AND the side label
                 display_text = f"{normalized_angle}{side_label}" # e.g., "42L" or "131R"
                 text_position = (int(mid_x) + 5, int(mid_y))
                 
@@ -182,15 +192,64 @@ def main():
 
 
 
+        # now we're sorting lines:
+        horiz, vert, sl_r_diag, sr_l_diag = [],  [],  [],  []
+        screen_center_x = src.shape[1] / 2
+        for line in linesP:
+            x1, y1, x2, y2 = line[0]
+            # Calculate the line's original angle and its midpoint
+            _, angle_deg = get_polar_angle(line[0])
+            mid_x = (x1 + x2) / 2
+            mid_y = (y1 + y2) / 2
+            
+            # Normalize the angle to a [0, 180) degree range
+            normalized_angle = int(angle_deg % 180)
+
+            # --- NEW: Determine if the line is on the Left or Right side ---
+            side_label = "L" if mid_x < screen_center_x else "R"
+
+
+
+            # --- Updated classification using normalized angle AND side label ---
+            if normalized_angle < 15 or normalized_angle > 165: # Horizontal
+                horiz.append(line)
+            elif 75 < normalized_angle < 105: # Vertical
+                vert.append(line)
+            elif 15 <= normalized_angle <= 75: # left diagonal
+                if side_label == "R": # right side
+                    sr_l_diag.append(line)
+            elif 105 <= normalized_angle <= 165: # right diagonal
+                if side_label == "L": # left side 
+                    sl_r_diag.append(line)
+            
+            # now we classify by each line type: - do within 10 of each previous entry
+            horiz_dict = {}
+            horiz_list_list = [] # list of list of mean, then all line segments
+            HORIZ_TOL = 15
+            for line in horiz:
+                x1, y1, x2, y2 = line[0]
+                _, angle_deg = get_polar_angle(line[0])
+                mean_y = (y1 + y2) / 2
+                if not horiz_dict: # list empty
+                    horiz_list_list.append([mean_y, line])
+                else:
+                    for i, cluster_list in horiz_list_list:
+                        cluster_mean_y = cluster_list[0]
+                        if abs(cluster_mean_y - mean_y) <= HORIZ_TOL:
+                            horiz_list_list[i].append(line)
+                            num_lines_in_cluster = len(cluster_list) - 1
+                            new_cluster_mean_y = (cluster_mean_y * num_lines_in_cluster + mean_y) / num_lines_in_cluster + 1
+                            horiz_list_list[0] = new_cluster_mean_y
+                        else:
+                            horiz_list_list.append([mean_y, line])
+            # now we combine all horizontal lines - using average slope and average point, truncating at extremes
+            for cluster_list in horiz_list_list:
+                
+                
 
 
 
 
-
-               
-                #break
-
-import math
 
 def get_polar_angle(line):
     """Calculate the polar angle of a line given its endpoints."""
