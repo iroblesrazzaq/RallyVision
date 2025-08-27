@@ -138,10 +138,10 @@ def main():
                 
                 # --- NEW: Write the endpoint coordinates onto the image ---
                 coord_font_scale = 0.4 # Use a slightly smaller font for coordinates
-                cv2.putText(colored_lines_image, f'({x1},{y1})', (x1, y1 - 10), font, 
-                            coord_font_scale, font_color, font_thickness, cv2.LINE_AA)
-                cv2.putText(colored_lines_image, f'({x2},{y2})', (x2, y2 - 10), font, 
-                            coord_font_scale, font_color, font_thickness, cv2.LINE_AA)
+                #cv2.putText(colored_lines_image, f'({x1},{y1})', (x1, y1 - 10), font, 
+                #            coord_font_scale, font_color, font_thickness, cv2.LINE_AA)
+                #cv2.putText(colored_lines_image, f'({x2},{y2})', (x2, y2 - 10), font, 
+                #            coord_font_scale, font_color, font_thickness, cv2.LINE_AA)
 
                 # Calculate the line's original angle and its midpoint
                 _, angle_deg = get_polar_angle(line[0])
@@ -223,28 +223,51 @@ def main():
                     sl_r_diag.append(line)
             
             # now we classify by each line type: - do within 10 of each previous entry
-            horiz_dict = {}
+
             horiz_list_list = [] # list of list of mean, then all line segments
             HORIZ_TOL = 15
             for line in horiz:
                 x1, y1, x2, y2 = line[0]
                 _, angle_deg = get_polar_angle(line[0])
                 mean_y = (y1 + y2) / 2
-                if not horiz_dict: # list empty
-                    horiz_list_list.append([mean_y, line])
+                if not horiz_list_list: # list empty
+                    horiz_list_list.append([mean_y, (line, angle_deg)])
                 else:
                     for i, cluster_list in horiz_list_list:
                         cluster_mean_y = cluster_list[0]
                         if abs(cluster_mean_y - mean_y) <= HORIZ_TOL:
-                            horiz_list_list[i].append(line)
+                            horiz_list_list[i].append((line, angle_deg))
                             num_lines_in_cluster = len(cluster_list) - 1
                             new_cluster_mean_y = (cluster_mean_y * num_lines_in_cluster + mean_y) / num_lines_in_cluster + 1
                             horiz_list_list[0] = new_cluster_mean_y
                         else:
-                            horiz_list_list.append([mean_y, line])
+                            horiz_list_list.append([mean_y, (line, angle_deg)])
             # now we combine all horizontal lines - using average slope and average point, truncating at extremes
+            final_horiz_lines = []
             for cluster_list in horiz_list_list:
-                
+                mean_y, *lines = cluster_list
+                xmax, xmin = -10000, 10000
+                angle_sum = 0
+                ct = 0
+                for line, angle_deg in lines:
+                    ct += 1
+                    angle_sum += angle_deg
+                    x1, y1, x2, y2 = line[0]
+                    x1_greater = x1 > x2
+                    if x1_greater:
+                        if x1 > xmax:
+                            xmax = x1
+                        if x2 < xmin:
+                            xmin = x2
+                    else: # x1 is smaller, x2 is greater
+                        if x2 > xmax:
+                            xmax = x2
+                        if x1 < xmin:
+                            xmin = x1
+                mean_angle = angle_sum / ct
+                # now we have mean y, x extrema, and mean angle - defines our cluster segment.
+
+                    
                 
 
 
