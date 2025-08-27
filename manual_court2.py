@@ -192,83 +192,108 @@ def main():
 
 
 
-        # now we're sorting lines:
+        # --- Task 1, 2, 3, & 4 Implementation ---
+
+        # Initialize lists to classify raw line segments
         horiz, vert, sl_r_diag, sr_l_diag = [],  [],  [],  []
         screen_center_x = src.shape[1] / 2
+        
+        # Classify all detected linesP into orientation categories
         for line in linesP:
             x1, y1, x2, y2 = line[0]
-            # Calculate the line's original angle and its midpoint
             _, angle_deg = get_polar_angle(line[0])
             mid_x = (x1 + x2) / 2
-            mid_y = (y1 + y2) / 2
             
-            # Normalize the angle to a [0, 180) degree range
             normalized_angle = int(angle_deg % 180)
-
-            # --- NEW: Determine if the line is on the Left or Right side ---
             side_label = "L" if mid_x < screen_center_x else "R"
 
-
-
-            # --- Updated classification using normalized angle AND side label ---
             if normalized_angle < 15 or normalized_angle > 165: # Horizontal
-                horiz.append(line)
+                horiz.append((line, angle_deg))
             elif 75 < normalized_angle < 105: # Vertical
-                vert.append(line)
-            elif 15 <= normalized_angle <= 75: # left diagonal
-                if side_label == "R": # right side
-                    sr_l_diag.append(line)
-            elif 105 <= normalized_angle <= 165: # right diagonal
-                if side_label == "L": # left side 
-                    sl_r_diag.append(line)
+                vert.append((line, angle_deg))
+            elif 15 <= normalized_angle <= 75: # Positive Slope diagonal
+                if side_label == "R":
+                    sr_l_diag.append((line, angle_deg))
+            elif 105 <= normalized_angle <= 165: # Negative Slope diagonal
+                if side_label == "L": 
+                    sl_r_diag.append((line, angle_deg))
+
+        # --- 1. CLUSTER HORIZONTAL LINES (BUG FIXED) ---
+        horiz_clusters = [] 
+        HORIZ_TOL = 15 # Tolerance in pixels for y-coordinates to be in the same cluster
+        
+        for line_tuple in horiz:
+            line, angle_deg = line_tuple
+            x1, y1, x2, y2 = line[0]
+            mean_y = (y1 + y2) / 2
             
-            # now we classify by each line type: - do within 10 of each previous entry
+            found_cluster = False
+            for i, cluster in enumerate(horiz_clusters):
+                cluster_mean_y = cluster[0]
+                if abs(cluster_mean_y - mean_y) <= HORIZ_TOL:
+                    # Add to existing cluster
+                    horiz_clusters[i].append(line_tuple)
+                    # Update the cluster's running average mean_y
+                    num_lines = len(cluster) - 1
+                    new_mean = ((cluster_mean_y * num_lines) + mean_y) / (num_lines + 1)
+                    horiz_clusters[i][0] = new_mean
+                    found_cluster = True
+                    break
+            
+            if not found_cluster:
+                # No suitable cluster found, create a new one
+                # Structure: [mean_y, (line1, angle1), (line2, angle2), ...]
+                horiz_clusters.append([mean_y, line_tuple])
 
-            horiz_list_list = [] # list of list of mean, then all line segments
-            HORIZ_TOL = 15
-            for line in horiz:
-                x1, y1, x2, y2 = line[0]
-                _, angle_deg = get_polar_angle(line[0])
-                mean_y = (y1 + y2) / 2
-                if not horiz_list_list: # list empty
-                    horiz_list_list.append([mean_y, (line, angle_deg)])
-                else:
-                    for i, cluster_list in horiz_list_list:
-                        cluster_mean_y = cluster_list[0]
-                        if abs(cluster_mean_y - mean_y) <= HORIZ_TOL:
-                            horiz_list_list[i].append((line, angle_deg))
-                            num_lines_in_cluster = len(cluster_list) - 1
-                            new_cluster_mean_y = (cluster_mean_y * num_lines_in_cluster + mean_y) / num_lines_in_cluster + 1
-                            horiz_list_list[0] = new_cluster_mean_y
-                        else:
-                            horiz_list_list.append([mean_y, (line, angle_deg)])
-            # now we combine all horizontal lines - using average slope and average point, truncating at extremes
-            final_horiz_lines = []
-            for cluster_list in horiz_list_list:
-                mean_y, *lines = cluster_list
-                xmax, xmin = -10000, 10000
-                angle_sum = 0
-                ct = 0
-                for line, angle_deg in lines:
-                    ct += 1
-                    angle_sum += angle_deg
-                    x1, y1, x2, y2 = line[0]
-                    x1_greater = x1 > x2
-                    if x1_greater:
-                        if x1 > xmax:
-                            xmax = x1
-                        if x2 < xmin:
-                            xmin = x2
-                    else: # x1 is smaller, x2 is greater
-                        if x2 > xmax:
-                            xmax = x2
-                        if x1 < xmin:
-                            xmin = x1
-                mean_angle = angle_sum / ct
-                # now we have mean y, x extrema, and mean angle - defines our cluster segment.
+        # --- 2 & 3. CALCULATE FINAL MERGED LINES (WITH CORRECT MEAN ANGLE) ---
+        final_horiz_lines = []
+        for cluster in horiz_clusters:
+            mean_y, *lines_with_angles = cluster
+            
+            if not lines_with_angles:
+                continue 
 
-                    
+            xmax, xmin = -10000, 10000
+            angle_sum = 0
+            
+            for line, angle_deg in lines_with_angles:
+                # Adjust angle to handle the 0/180 wraparound for averaging
+                adjusted_angle_deg = angle_deg
+                if angle_deg > 90:
+                    adjusted_angle_deg = angle_deg - 180
+                angle_sum += adjusted_angle_deg
                 
+                # Find the horizontal extent (xmin, xmax) of the cluster
+                x1, y1, x2, y2 = line[0]
+                xmin = min(xmin, x1, x2)
+                xmax = max(xmax, x1, x2)
+
+            # Calculate the correct average angle
+            mean_angle_deg = angle_sum / len(lines_with_angles)
+            
+            # Use the mean angle to calculate the final line's endpoints
+            mean_angle_rad = math.radians(mean_angle_deg)
+            slope = math.tan(mean_angle_rad)
+            center_x = (xmin + xmax) / 2
+            
+            y_at_xmin = slope * (xmin - center_x) + mean_y
+            y_at_xmax = slope * (xmax - center_x) + mean_y
+
+            # Store the final merged line
+            final_line = [[int(xmin), int(y_at_xmin), int(xmax), int(y_at_xmax)]]
+            final_horiz_lines.append(final_line)
+
+        # --- 4. WRITE FINAL MERGED LINES TO THE IMAGE ---
+        # Create a copy to draw the final lines on
+        final_lines_image = src.copy()
+        for line in final_horiz_lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(final_lines_image, (x1, y1), (x2, y2), (0, 0, 255), 3) # Draw in Red
+
+        # You can now display the image with the final lines
+        cv2.imshow('Final Merged Lines', final_lines_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 
