@@ -118,9 +118,6 @@ def main():
 
         # --- Draw the ORIGINAL, UNMERGED lines for comparison ---
         unmerged_lines_image = src.copy()
-        # Create copy of source image for drawing
-        # Create a copy of the source image for drawing
-# Create a copy of the source image for drawing
         colored_lines_image = src.copy()
 
         if linesP is None:
@@ -200,8 +197,10 @@ def main():
 
 
         # --- 1. CLUSTER HORIZONTAL LINES (BUG FIXED) ---
+        # --- 1. CLUSTER AND MERGE HORIZONTAL LINES (Existing Code) ---
         horiz_clusters = [] 
-        HORIZ_TOL = 30 # Tolerance in pixels for y-coordinates
+        HORIZ_TOL = 30 
+        MIN_HORIZONTAL_LINE_LENGTH = 300
 
         for line in horiz:
             x1, y1, x2, y2 = line[0]
@@ -211,9 +210,7 @@ def main():
             for i, cluster in enumerate(horiz_clusters):
                 cluster_mean_y = cluster[0]
                 if abs(cluster_mean_y - mean_y) <= HORIZ_TOL:
-                    # Add line to existing cluster
                     horiz_clusters[i].append(line)
-                    # Update the cluster's running average mean_y
                     num_lines = len(cluster) - 1
                     new_mean = ((cluster_mean_y * num_lines) + mean_y) / (num_lines + 1)
                     horiz_clusters[i][0] = new_mean
@@ -221,43 +218,105 @@ def main():
                     break
             
             if not found_cluster:
-                # No suitable cluster found, create a new one
-                # Structure: [mean_y, line1, line2, ...]
                 horiz_clusters.append([mean_y, line])
 
-        # --- 2 & 3. CALCULATE FINAL HORIZONTAL LINES (SIMPLIFIED) ---
         final_horiz_lines = []
         for cluster in horiz_clusters:
-            # The first item is mean_y, the rest are the line segments
             mean_y, *lines_in_cluster = cluster
-            
-            if not lines_in_cluster:
-                continue 
+            if not lines_in_cluster: continue 
 
             xmax, xmin = -10000, 10000
-            
-            # Find the horizontal extent (xmin, xmax) of the cluster
             for line in lines_in_cluster:
                 x1, y1, x2, y2 = line[0]
                 xmin = min(xmin, x1, x2)
                 xmax = max(xmax, x1, x2)
 
-            # Create the final, perfectly horizontal line
-            final_line = [[int(xmin), int(mean_y), int(xmax), int(mean_y)]]
-            final_horiz_lines.append(final_line)
+            if xmax - xmin >= MIN_HORIZONTAL_LINE_LENGTH:
+                final_line = [[int(xmin), int(mean_y), int(xmax), int(mean_y)]]
+                final_horiz_lines.append(final_line)
 
-        # --- 4. WRITE FINAL MERGED LINES TO THE IMAGE ---
+        # --- 2. DEFINE REUSABLE MERGING FUNCTION FOR DIAGONALS ---
+        def merge_lines(lines_to_merge, RHO_TOL, THETA_TOL):
+            clusters = []
+            for line in lines_to_merge:
+                x1, y1, x2, y2 = line[0]
+                _, angle_deg = get_polar_angle(line[0])
+                
+                normalized_angle = angle_deg % 180
+                theta_rad = np.deg2rad(normalized_angle)
+                rho = x1 * np.cos(theta_rad) + y1 * np.sin(theta_rad)
+
+                found_cluster = False
+                for i, cluster in enumerate(clusters):
+                    mean_rho, mean_theta_rad = cluster[0], cluster[1]
+                    if abs(rho - mean_rho) < RHO_TOL and abs(theta_rad - mean_theta_rad) < np.deg2rad(THETA_TOL):
+                        clusters[i].append(line)
+                        # Update cluster's mean rho and theta
+                        clusters[i][0] = (mean_rho * (len(cluster)-2) + rho) / (len(cluster)-1)
+                        clusters[i][1] = (mean_theta_rad * (len(cluster)-2) + theta_rad) / (len(cluster)-1)
+                        found_cluster = True
+                        break
+                
+                if not found_cluster:
+                    # Structure: [mean_rho, mean_theta_rad, line1, line2, ...]
+                    clusters.append([rho, theta_rad, line])
+            
+            final_merged_lines = []
+            for cluster in clusters:
+                _mean_rho, _mean_theta_rad, *lines_in_cluster = cluster
+                if len(lines_in_cluster) < 2: continue # Don't merge single segments
+
+                all_points = np.array([line[0] for line in lines_in_cluster]).reshape(-1, 2)
+                
+                # Find the two most distant points to define the final line's extent
+                max_dist = 0
+                p1_final, p2_final = None, None
+                for p1 in all_points:
+                    for p2 in all_points:
+                        dist = np.linalg.norm(p1 - p2)
+                        if dist > max_dist:
+                            max_dist = dist
+                            p1_final, p2_final = p1, p2
+                
+                if p1_final is not None:
+                    final_merged_lines.append([[int(p1_final[0]), int(p1_final[1]), int(p2_final[0]), int(p2_final[1])]])
+
+            return final_merged_lines
+
+        # --- 3. CLUSTER AND MERGE BOTH SETS OF DIAGONALS ---
+        DIAG_RHO_TOL = 25  # pixels
+        DIAG_THETA_TOL = 7 # degrees
+        
+        final_sr_lines = merge_lines(sr_l_diag, DIAG_RHO_TOL, DIAG_THETA_TOL)
+        final_sl_lines = merge_lines(sl_r_diag, DIAG_RHO_TOL, DIAG_THETA_TOL)
+
+        # --- 4. DRAW FINAL MERGED LINES TO THE IMAGE ---
         final_lines_image = src.copy()
+        
+        # Draw horizontal lines (Red)
         for line in final_horiz_lines:
             x1, y1, x2, y2 = line[0]
-            # Draw in a bright, visible color (BGR: Red)
-            cv2.line(final_lines_image, (x1, y1), (x2, y2), (0, 0, 255), 3) 
+            cv2.line(final_lines_image, (x1, y1), (x2, y2), (0, 0, 255), 3)
 
-        # Display the image with the final lines for debugging
-        cv2.imshow('Final Merged Horizontal Lines', final_lines_image)
+        # Draw right-side diagonals (Blue)
+        for line in final_sr_lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(final_lines_image, (x1, y1), (x2, y2), (255, 0, 0), 3)
+
+        # Draw left-side diagonals green
+        for line in final_sl_lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(final_lines_image, (x1, y1), (x2, y2), (0, 255, 0), 3)
+
+        # Display the image with all final merged lines
+        cv2.imshow('Final Merged Court Lines', final_lines_image)
         cv2.waitKey(0)
-        # cv2.destroyAllWindows() # You might want to call this at the end of your main loop
         cv2.destroyAllWindows()
+
+
+
+
+
 
 
 
