@@ -34,8 +34,8 @@ def main():
         #if video_path !='./raw_videos/9⧸5⧸15 Singles Uncut.mp4':
         #    continue
 
-        if video_path != './raw_videos/Unedited Points - Fall 2021 - Erkin Tootoonchi Moghaddam.mp4':
-            continue
+        #if video_path != './raw_videos/Unedited Points - Fall 2021 - Erkin Tootoonchi Moghaddam.mp4':
+        #    continue
 
         print(video_path.split('/')[-1])
         # %%
