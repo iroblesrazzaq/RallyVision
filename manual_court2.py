@@ -583,9 +583,8 @@ def main():
             
             if right_slope != float('inf'):
                 # For right sideline, shift outward (away from center of image)
-                # Right sideline should be shifted to the right (positive x direction)
-                # Since left sideline uses subtraction, right sideline should use addition
-                right_shifted_intercept = right_intercept + dynamic_shift / np.sqrt(1 + right_slope**2)
+                # Right sideline should be shifted up (decrease y-intercept)
+                right_shifted_intercept = right_intercept - dynamic_shift / np.sqrt(1 + right_slope**2)
                 
                 right_y_at_x0 = int(right_slope * 0 + right_shifted_intercept)
                 right_y_at_xmax = int(right_slope * src.shape[1] + right_shifted_intercept)
