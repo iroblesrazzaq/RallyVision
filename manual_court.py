@@ -529,14 +529,14 @@ class CourtDetector:
     
     def process_video(self, video_path: str, target_time: int = 60) -> Tuple[np.ndarray, np.ndarray, dict]:
         """
-        Main wrapper method to process a video and return the playable court area.
+        Main wrapper method to process a video and return the court lines.
         
         Args:
             video_path: Path to the video file
             target_time: Time in seconds to extract frame from (default: 60)
             
         Returns:
-            Tuple of (playable_area_mask, processed_frame, metadata)
+            Tuple of (processed_frame_with_lines, clean_frame, metadata)
         """
         print(f"Processing video: {video_path}")
         
@@ -555,7 +555,7 @@ class CourtDetector:
         baseline = self.find_baseline(merged_horizontal)
         if baseline is None:
             print("No valid baseline found")
-            return np.zeros(clean_frame.shape[:2], dtype=np.uint8), clean_frame, {"error": "No baseline found"}
+            return clean_frame, clean_frame, {"error": "No baseline found"}
         
         # Step 5: Process sides
         right_doubles_sideline = self.process_side_decision_tree(
@@ -563,21 +563,161 @@ class CourtDetector:
         left_doubles_sideline = self.process_side_decision_tree(
             merged_left_diagonals, baseline, clean_frame.shape[1], "left")
         
-        # Step 6: Estimate playable area
-        playable_area_mask = self.estimate_playable_court_area(
-            left_doubles_sideline, right_doubles_sideline, baseline, clean_frame.shape)
+        # Step 6: Draw the lines on the image
+        final_result_image = self.draw_court_lines(clean_frame, baseline, left_doubles_sideline, right_doubles_sideline)
         
         # Create metadata
         metadata = {
             "baseline_found": baseline is not None,
             "left_sideline_found": left_doubles_sideline is not None,
             "right_sideline_found": right_doubles_sideline is not None,
-            "playable_area_pixels": np.sum(playable_area_mask > 0),
-            "total_pixels": playable_area_mask.size,
-            "playable_area_percentage": (np.sum(playable_area_mask > 0) / playable_area_mask.size) * 100
+            "baseline_width": abs(baseline[0][2] - baseline[0][0]) if baseline else 0,
+            "image_width": clean_frame.shape[1]
         }
         
-        return playable_area_mask, clean_frame, metadata
+        return final_result_image, clean_frame, metadata
+    
+    def draw_court_lines(self, frame: np.ndarray, baseline: Optional[List], 
+                        left_doubles_sideline: Optional[List], 
+                        right_doubles_sideline: Optional[List]) -> np.ndarray:
+        """
+        Draw the detected court lines on the frame, similar to manual_court2.py.
+        
+        Args:
+            frame: Input frame
+            baseline: The baseline line
+            left_doubles_sideline: The left doubles sideline
+            right_doubles_sideline: The right doubles sideline
+            
+        Returns:
+            Frame with court lines drawn
+        """
+        final_result_image = frame.copy()
+        failures = []
+        
+        # Draw baseline (green)
+        if baseline is not None:
+            cv2.line(final_result_image, (baseline[0][0], baseline[0][1]), 
+                     (baseline[0][2], baseline[0][3]), (0, 255, 0), 3)
+        
+        # Draw doubles sidelines (if found) - extended through the whole image
+        if right_doubles_sideline is not None:
+            # Get line equation for right sideline
+            rx1, ry1, rx2, ry2 = right_doubles_sideline[0]
+            right_slope = (ry2 - ry1) / (rx2 - rx1) if (rx2 - rx1) != 0 else float('inf')
+            right_intercept = ry1 - right_slope * rx1
+            
+            # Calculate endpoints at image boundaries
+            if right_slope != float('inf'):
+                # Calculate y at x=0 and x=image_width
+                right_y_at_x0 = int(right_slope * 0 + right_intercept)
+                right_y_at_xmax = int(right_slope * frame.shape[1] + right_intercept)
+                cv2.line(final_result_image, (0, right_y_at_x0), (frame.shape[1], right_y_at_xmax), (255, 0, 0), 5)
+            else:
+                # Vertical line
+                cv2.line(final_result_image, (rx1, 0), (rx1, frame.shape[0]), (255, 0, 0), 5)
+            print("Right doubles sideline: FOUND")
+        else:
+            print("Right doubles sideline: NOT FOUND")
+            failures.append("RIGHT SIDELINE")
+            
+        if left_doubles_sideline is not None:
+            # Get line equation for left sideline
+            lx1, ly1, lx2, ly2 = left_doubles_sideline[0]
+            left_slope = (ly2 - ly1) / (lx2 - lx1) if (lx2 - lx1) != 0 else float('inf')
+            left_intercept = ly1 - left_slope * lx1
+            
+            # Calculate endpoints at image boundaries
+            if left_slope != float('inf'):
+                # Calculate y at x=0 and x=image_width
+                left_y_at_x0 = int(left_slope * 0 + left_intercept)
+                left_y_at_xmax = int(left_slope * frame.shape[1] + left_intercept)
+                cv2.line(final_result_image, (0, left_y_at_x0), (frame.shape[1], left_y_at_xmax), (0, 0, 255), 5)
+            else:
+                # Vertical line
+                cv2.line(final_result_image, (lx1, 0), (lx1, frame.shape[0]), (0, 0, 255), 5)
+            print("Left doubles sideline: FOUND")
+        else:
+            print("Left doubles sideline: NOT FOUND")
+            failures.append("LEFT SIDELINE")
+        
+        # Draw extended doubles sidelines in pink and yellow (if both sidelines are found)
+        if left_doubles_sideline is not None and right_doubles_sideline is not None:
+            # Calculate shifted sidelines for visualization
+            BASE_HORIZONTAL_SHIFT = 100
+            screen_width = frame.shape[1]
+            bx1, by1, bx2, by2 = baseline[0]
+            baseline_width = abs(bx2 - bx1)
+            scale_factor = baseline_width / screen_width
+            dynamic_shift = BASE_HORIZONTAL_SHIFT * scale_factor
+            
+            # Draw extended sidelines in pink and yellow - extended through the whole image
+            # Get line equations for extended sidelines
+            lx1, ly1, lx2, ly2 = left_doubles_sideline[0]
+            left_slope = (ly2 - ly1) / (lx2 - lx1) if (lx2 - lx1) != 0 else float('inf')
+            left_intercept = ly1 - left_slope * lx1
+            
+            rx1, ry1, rx2, ry2 = right_doubles_sideline[0]
+            right_slope = (ry2 - ry1) / (rx2 - rx1) if (rx2 - rx1) != 0 else float('inf')
+            right_intercept = ry1 - right_slope * rx1
+            
+            # Calculate shifted intercepts with proper outward direction
+            if left_slope != float('inf'):
+                # For left sideline, shift outward (away from center of image)
+                # Left sideline should be shifted to the left (negative x direction)
+                left_shifted_intercept = left_intercept - dynamic_shift / np.sqrt(1 + left_slope**2)
+                left_y_at_x0 = int(left_slope * 0 + left_shifted_intercept)
+                left_y_at_xmax = int(left_slope * frame.shape[1] + left_shifted_intercept)
+                cv2.line(final_result_image, (0, left_y_at_x0), (frame.shape[1], left_y_at_xmax), (147, 20, 255), 3)  # Pink
+            else:
+                # Vertical line shifted horizontally (leftward for left sideline)
+                left_shifted_x = lx1 - dynamic_shift
+                cv2.line(final_result_image, (left_shifted_x, 0), (left_shifted_x, frame.shape[0]), (147, 20, 255), 3)  # Pink
+            
+            if right_slope != float('inf'):
+                # For right sideline, shift outward (away from center of image)
+                # Right sideline should be shifted up (decrease y-intercept)
+                right_shifted_intercept = right_intercept - dynamic_shift / np.sqrt(1 + right_slope**2)
+                
+                right_y_at_x0 = int(right_slope * 0 + right_shifted_intercept)
+                right_y_at_xmax = int(right_slope * frame.shape[1] + right_shifted_intercept)
+                cv2.line(final_result_image, (0, right_y_at_x0), (frame.shape[1], right_y_at_xmax), (0, 255, 255), 3)  # Yellow
+            else:
+                # Vertical line shifted horizontally (rightward for right sideline)
+                right_shifted_x = rx1 + dynamic_shift
+                cv2.line(final_result_image, (right_shifted_x, 0), (right_shifted_x, frame.shape[0]), (0, 255, 255), 3)  # Yellow
+            
+            print(f"Extended doubles sidelines drawn (left: pink, right: yellow, shift: {dynamic_shift:.1f}px)")
+        
+        # Add failure text to image
+        if failures:
+            # Set up text properties
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 1.0
+            font_color = (0, 0, 255)  # Red for failures
+            font_thickness = 2
+            
+            # Create failure message
+            failure_text = "FAILED: " + ", ".join(failures)
+            
+            # Get text size for positioning
+            (text_width, text_height), baseline_text = cv2.getTextSize(failure_text, font, font_scale, font_thickness)
+            
+            # Position text in top-left corner with some padding
+            text_x = 20
+            text_y = 40
+            
+            # Add black background rectangle for better visibility
+            cv2.rectangle(final_result_image, 
+                         (text_x - 10, text_y - text_height - 10),
+                         (text_x + text_width + 10, text_y + 10),
+                         (0, 0, 0), -1)
+            
+            # Add the failure text
+            cv2.putText(final_result_image, failure_text, (text_x, text_y), 
+                       font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        
+        return final_result_image
     
     # Helper methods
     def _get_polar_angle(self, line: List[int]) -> Tuple[float, float]:
@@ -881,11 +1021,11 @@ if __name__ == "__main__":
     video_path = "raw_videos/example_video.mp4"
     
     # Process the video
-    playable_area_mask, processed_frame, metadata = detector.process_video(video_path)
+    processed_frame_with_lines, clean_frame, metadata = detector.process_video(video_path)
     
     print("Processing complete!")
     print(f"Metadata: {metadata}")
     
-    # Save the playable area mask
-    cv2.imwrite("playable_area_mask.png", playable_area_mask)
-    print("Playable area mask saved as 'playable_area_mask.png'")
+    # Save the processed frame with lines
+    cv2.imwrite("court_lines_result.png", processed_frame_with_lines)
+    print("Court lines result saved as 'court_lines_result.png'")
