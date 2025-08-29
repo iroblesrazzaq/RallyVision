@@ -1009,7 +1009,7 @@ def filter_players_by_playable_area(player_bboxes: List[Tuple[int, int, int, int
     return filtered_bboxes
 
 
-# Example usage
+
 if __name__ == "__main__":
     # Initialize the court detector
     detector = CourtDetector()
