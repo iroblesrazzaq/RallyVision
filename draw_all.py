@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""
+draw_all.py - Batch annotate all saved pose data files
+
+This script finds all .npz pose data files in the pose_data directory and creates
+annotated videos for each one using the video_annotator.py script.
+
+Usage:
+    python draw_all.py [model_size]
+    
+    model_size: Optional YOLO model size (n, s, m, l) to filter files. 
+                If not provided, processes all .npz files.
+
+Examples:
+    python draw_all.py          # Process all .npz files
+    python draw_all.py s        # Process only small model files
+    python draw_all.py m        # Process only medium model files
+"""
+
+import os
+import glob
+import subprocess
+import time
+import sys
+import re
+
+
+def get_npz_files(model_size=None):
+    """
+    Get all .npz files from pose_data subdirectories, optionally filtered by model size.
+    
+    Args:
+        model_size (str, optional): Model size to filter by (n, s, m, l)
+        
+    Returns:
+        list: List of .npz file paths
+    """
+    pose_data_dir = "pose_data"
+    
+    if not os.path.exists(pose_data_dir):
+        print(f"❌ Pose data directory '{pose_data_dir}' not found!")
+        return []
+    
+    # Get all .npz files from subdirectories
+    all_files = []
+    for subdir in os.listdir(pose_data_dir):
+        subdir_path = os.path.join(pose_data_dir, subdir)
+        if os.path.isdir(subdir_path) and subdir.endswith('conf'):
+            npz_pattern = os.path.join(subdir_path, "*.npz")
+            all_files.extend(glob.glob(npz_pattern))
+    
+    if model_size:
+        # Filter by model size
+        filtered_files = []
+        for file_path in all_files:
+            filename = os.path.basename(file_path)
+            if f"_yolo{model_size}.npz" in filename:
+                filtered_files.append(file_path)
+        return filtered_files
+    else:
+        return all_files
+
+
+def extract_video_info_from_filename(npz_path):
+    """
+    Extract video path, start time, duration, and model size from .npz filename.
+    
+    Args:
+        npz_path (str): Path to .npz file
+        
+    Returns:
+        dict: Dictionary with video_path, start_time, duration, model_size
+    """
+    filename = os.path.basename(npz_path)
+    
+    # Extract model size
+    model_size_match = re.search(r'_yolo([nslm])\.npz$', filename)
+    model_size = model_size_match.group(1) if model_size_match else 's'
+    
+    # Extract time range
+    time_match = re.search(r'_posedata_(\d+)s_to_(\d+)s_', filename)
+    if not time_match:
+        print(f"⚠️  Could not parse time range from filename: {filename}")
+        return None
+    
+    start_time = int(time_match.group(1))
+    end_time = int(time_match.group(2))
+    duration = end_time - start_time
+    
+    # Extract base video name (remove _posedata_... suffix)
+    base_name = filename.split('_posedata_')[0]
+    video_path = os.path.join("raw_videos", f"{base_name}.mp4")
+    
+    return {
+        'video_path': video_path,
+        'start_time': start_time,
+        'duration': duration,
+        'model_size': model_size,
+        'npz_path': npz_path
+    }
+
+
+def run_annotation_command(video_path, start_time, duration, model_size):
+    """
+    Run the video annotation command.
+    
+    Args:
+        video_path (str): Path to video file
+        start_time (int): Start time in seconds
+        duration (int): Duration in seconds
+        model_size (str): Model size
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    cmd = ["python", "video_annotator.py", str(start_time), str(duration), video_path, model_size]
+    
+    print(f"🔄 Running: {' '.join(cmd)}")
+    
+    start_time_cmd = time.time()
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    end_time_cmd = time.time()
+    
+    if result.returncode == 0:
+        print(f"✅ Success ({end_time_cmd - start_time_cmd:.2f}s)")
+        return True
+    else:
+        print(f"❌ Failed: {result.stderr.strip()}")
+        return False
+
+
+def main():
+    # Parse command line arguments
+    model_size = sys.argv[1] if len(sys.argv) > 1 else None
+    
+    print("🎨 Batch Annotating All Pose Data Files")
+    print("=" * 50)
+    
+    if model_size:
+        print(f"Model size filter: {model_size}")
+    else:
+        print("Processing all model sizes")
+    
+    # Get .npz files
+    npz_files = get_npz_files(model_size)
+    
+    if not npz_files:
+        print("❌ No .npz files found!")
+        if model_size:
+            print(f"   No files found for model size '{model_size}'")
+        return False
+    
+    print(f"\n📁 Found {len(npz_files)} .npz files:")
+    for i, npz_file in enumerate(npz_files, 1):
+        print(f"   {i}. {os.path.basename(npz_file)}")
+    
+    # Process each file
+    print(f"\n🎬 Processing {len(npz_files)} files...")
+    print("=" * 50)
+    
+    successful = 0
+    failed = 0
+    start_time_total = time.time()
+    
+    for i, npz_file in enumerate(npz_files, 1):
+        print(f"\n📹 Processing {i}/{len(npz_files)}: {os.path.basename(npz_file)}")
+        
+        # Extract info from filename
+        info = extract_video_info_from_filename(npz_file)
+        if not info:
+            print(f"❌ Skipping {os.path.basename(npz_file)} - could not parse filename")
+            failed += 1
+            continue
+        
+        # Check if video file exists
+        if not os.path.exists(info['video_path']):
+            print(f"❌ Video file not found: {info['video_path']}")
+            failed += 1
+            continue
+        
+        # Check if annotated video already exists
+        base_name = os.path.splitext(os.path.basename(info['video_path']))[0]
+        annotated_path = f"sanity_check_clips/{base_name}_annotated_{info['start_time']}s_to_{info['start_time'] + info['duration']}s_yolo{info['model_size']}.mp4"
+        
+        if os.path.exists(annotated_path):
+            print(f"⏭️  Skipping - annotated video already exists: {os.path.basename(annotated_path)}")
+            successful += 1
+            continue
+        
+        # Run annotation
+        if run_annotation_command(
+            info['video_path'], 
+            info['start_time'], 
+            info['duration'], 
+            info['model_size']
+        ):
+            successful += 1
+        else:
+            failed += 1
+    
+    # Summary
+    end_time_total = time.time()
+    total_time = end_time_total - start_time_total
+    
+    print(f"\n🎉 BATCH ANNOTATION COMPLETED")
+    print("=" * 50)
+    print(f"Total files processed: {len(npz_files)}")
+    print(f"Successful: {successful}")
+    print(f"Failed: {failed}")
+    print(f"Success rate: {(successful/len(npz_files)*100):.1f}%")
+    print(f"Total runtime: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
+    
+    if successful > 0:
+        print(f"Average time per file: {total_time/successful:.2f} seconds")
+    
+    return failed == 0
+
+
+if __name__ == "__main__":
+    success = main()
+    sys.exit(0 if success else 1)

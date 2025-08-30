@@ -75,13 +75,13 @@ def process_single_video(video_path, start_time, duration, target_fps, model_siz
     print(f"{'='*80}")
     
     # Step 1: Extract pose data
-    extract_cmd = ["python", "pose_extractor.py", str(start_time), str(duration), str(target_fps), video_path]
+    extract_cmd = ["python", "pose_extractor.py", str(start_time), str(duration), str(target_fps), video_path, model_size]
     if not run_command(extract_cmd, f"Step 1: Pose Data Extraction - {os.path.basename(video_path)}"):
         print(f"❌ Failed to extract pose data for {os.path.basename(video_path)}")
         return False
     
     # Step 2: Create annotated video
-    annotate_cmd = ["python", "video_annotator.py", str(start_time), str(duration), video_path]
+    annotate_cmd = ["python", "video_annotator.py", str(start_time), str(duration), video_path, model_size]
     if not run_command(annotate_cmd, f"Step 2: Video Annotation - {os.path.basename(video_path)}"):
         print(f"❌ Failed to create annotated video for {os.path.basename(video_path)}")
         return False

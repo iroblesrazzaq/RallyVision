@@ -140,12 +140,20 @@ class PoseExtractor:
         print(f"✓ Successfully extracted pose data from {len(all_frames_data)} frames")
         
         # Save data to .npz file
-        output_dir = "pose_data"
+        # Extract model size from model path (e.g., "yolov8s-pose.pt" -> "s")
+        if 'yolov8' in self.model_path:
+            model_size = self.model_path.split('yolov8')[1].split('-')[0]
+        else:
+            model_size = 's'  # Default fallback
+        
+        # Create subdirectory with model size and confidence threshold
+        confidence_threshold = 0.05  # Current confidence threshold used in the model call
+        subdir_name = f"yolo{model_size}_{confidence_threshold}conf"
+        output_dir = os.path.join("pose_data", subdir_name)
         os.makedirs(output_dir, exist_ok=True)
         
-        # Construct descriptive filename with model size
+        # Construct descriptive filename
         base_name = os.path.splitext(os.path.basename(video_path))[0]
-        model_size = self.model_path.split('-')[1].split('.')[0] if '-' in self.model_path else 's'
         output_filename = f"{base_name}_posedata_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s_yolo{model_size}.npz"
         output_path = os.path.join(output_dir, output_filename)
         
@@ -163,20 +171,25 @@ if __name__ == "__main__":
         duration = int(sys.argv[2])
         target_fps = int(sys.argv[3]) if len(sys.argv) > 3 else 15
         video_path = sys.argv[4] if len(sys.argv) > 4 else "raw_videos/Monica Greene unedited tennis match play.mp4"
+        model_size = sys.argv[5] if len(sys.argv) > 5 else "s"
     else:
         start_time = 0
         duration = 10  # Default to 10 seconds for testing
         target_fps = 15
         video_path = "raw_videos/Monica Greene unedited tennis match play.mp4"
+        model_size = "s"
     
     # Start timing
     script_start_time = time.time()
     
+    # Construct model path based on model size
+    model_path = f"yolov8{model_size}-pose.pt"
+    
     print("Initializing PoseExtractor...")
-    pose_extractor = PoseExtractor()
+    pose_extractor = PoseExtractor(model_path=model_path)
     
     print(f"Processing video: {video_path}")
-    print(f"Start time: {start_time}s, Duration: {duration}s, Target FPS: {target_fps}")
+    print(f"Start time: {start_time}s, Duration: {duration}s, Target FPS: {target_fps}, Model: {model_path}")
     
     # Extract pose data
     output_path = pose_extractor.extract_pose_data(

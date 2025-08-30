@@ -3,6 +3,7 @@ import sys
 import time
 import os
 import numpy as np
+import re
 
 
 class VideoAnnotator:
@@ -67,18 +68,29 @@ class VideoAnnotator:
         print(f"Video properties: {width}x{height}, {fps} FPS")
         print(f"Processing frames {start_frame} to {end_frame}")
         
-        # Create output directory
-        output_dir = "sanity_check_clips"
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Construct output filename with model size
-        base_name = os.path.splitext(os.path.basename(video_path))[0]
-        # Extract model size from data filename
+        # Extract model size and confidence threshold from data path
         data_filename = os.path.basename(data_path)
         if '_yolo' in data_filename:
             model_size = data_filename.split('_yolo')[1].split('.')[0]
         else:
             model_size = 's'  # Default if not found
+        
+        # Extract confidence threshold from data path (assuming it's in the subdirectory name)
+        data_dir = os.path.dirname(data_path)
+        if os.path.basename(data_dir).endswith('conf'):
+            # Extract confidence from subdirectory name like "yolom_0.05conf"
+            conf_match = re.search(r'_(\d+\.\d+)conf$', os.path.basename(data_dir))
+            confidence_threshold = conf_match.group(1) if conf_match else "0.05"
+        else:
+            confidence_threshold = "0.05"  # Default
+        
+        # Create subdirectory with model size and confidence threshold
+        subdir_name = f"yolo{model_size}_{confidence_threshold}conf"
+        output_dir = os.path.join("sanity_check_clips", subdir_name)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Construct output filename
+        base_name = os.path.splitext(os.path.basename(video_path))[0]
         output_filename = f"{base_name}_annotated_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s_yolo{model_size}.mp4"
         output_path = os.path.join(output_dir, output_filename)
         
@@ -158,18 +170,22 @@ if __name__ == "__main__":
         start_time = int(sys.argv[1])
         duration = int(sys.argv[2])
         video_path = sys.argv[3] if len(sys.argv) > 3 else "raw_videos/Monica Greene unedited tennis match play.mp4"
+        model_size = sys.argv[4] if len(sys.argv) > 4 else "s"
     else:
         start_time = 0
         duration = 10  # Default to 10 seconds for testing
         video_path = "raw_videos/Monica Greene unedited tennis match play.mp4"
+        model_size = "s"
     
     # Start timing
     script_start_time = time.time()
     
-    # Dynamically construct data path
+    # Dynamically construct data path with model size and confidence threshold
     base_name = os.path.splitext(os.path.basename(video_path))[0]
-    data_filename = f"{base_name}_posedata_{start_time}s_to_{start_time + duration}s.npz"
-    data_path = os.path.join("pose_data", data_filename)
+    confidence_threshold = "0.05"  # Default confidence threshold
+    subdir_name = f"yolo{model_size}_{confidence_threshold}conf"
+    data_filename = f"{base_name}_posedata_{start_time}s_to_{start_time + duration}s_yolo{model_size}.npz"
+    data_path = os.path.join("pose_data", subdir_name, data_filename)
     
     print("Initializing VideoAnnotator...")
     video_annotator = VideoAnnotator()

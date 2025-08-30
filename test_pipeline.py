@@ -69,7 +69,7 @@ def main():
         return False
     
     # Step 2: Create annotated video
-    annotate_cmd = ["python", "video_annotator.py", str(start_time), str(duration), video_path]
+    annotate_cmd = ["python", "video_annotator.py", str(start_time), str(duration), video_path, "s"]  # Default to small model
     if not run_command(annotate_cmd, "Step 2: Video Annotation"):
         print("❌ Pipeline failed at step 2")
         return False
@@ -79,7 +79,9 @@ def main():
     
     # Check pose data file
     base_name = os.path.splitext(os.path.basename(video_path))[0]
-    pose_data_file = f"pose_data/{base_name}_posedata_{start_time}s_to_{start_time + duration}s.npz"
+    confidence_threshold = "0.05"  # Default confidence threshold
+    subdir_name = f"yolos_{confidence_threshold}conf"
+    pose_data_file = f"pose_data/{subdir_name}/{base_name}_posedata_{start_time}s_to_{start_time + duration}s_yolos.npz"
     if os.path.exists(pose_data_file):
         size = os.path.getsize(pose_data_file) / 1024  # KB
         print(f"✅ Pose data file: {pose_data_file} ({size:.1f} KB)")
@@ -87,7 +89,7 @@ def main():
         print(f"❌ Pose data file not found: {pose_data_file}")
     
     # Check annotated video file
-    video_file = f"sanity_check_clips/{base_name}_annotated_{start_time}s_to_{start_time + duration}s.mp4"
+    video_file = f"sanity_check_clips/{subdir_name}/{base_name}_annotated_{start_time}s_to_{start_time + duration}s_yolos.mp4"
     if os.path.exists(video_file):
         size = os.path.getsize(video_file) / (1024 * 1024)  # MB
         print(f"✅ Annotated video: {video_file} ({size:.1f} MB)")
