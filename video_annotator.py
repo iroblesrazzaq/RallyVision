@@ -71,9 +71,15 @@ class VideoAnnotator:
         output_dir = "sanity_check_clips"
         os.makedirs(output_dir, exist_ok=True)
         
-        # Construct output filename
+        # Construct output filename with model size
         base_name = os.path.splitext(os.path.basename(video_path))[0]
-        output_filename = f"{base_name}_annotated_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s.mp4"
+        # Extract model size from data filename
+        data_filename = os.path.basename(data_path)
+        if '_yolo' in data_filename:
+            model_size = data_filename.split('_yolo')[1].split('.')[0]
+        else:
+            model_size = 's'  # Default if not found
+        output_filename = f"{base_name}_annotated_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s_yolo{model_size}.mp4"
         output_path = os.path.join(output_dir, output_filename)
         
         # Initialize video writer

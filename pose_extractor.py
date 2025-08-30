@@ -29,6 +29,7 @@ class PoseExtractor:
             self.device = "cpu"
             print(f"Using device: {self.device.upper()} (MPS not available, using CPU)")
         
+        self.model_path = model_path
         self.model = YOLO(model_path)
         print(f"YOLOv8-pose model loaded successfully from: {model_path}")
     
@@ -142,9 +143,10 @@ class PoseExtractor:
         output_dir = "pose_data"
         os.makedirs(output_dir, exist_ok=True)
         
-        # Construct descriptive filename
+        # Construct descriptive filename with model size
         base_name = os.path.splitext(os.path.basename(video_path))[0]
-        output_filename = f"{base_name}_posedata_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s.npz"
+        model_size = self.model_path.split('-')[1].split('.')[0] if '-' in self.model_path else 's'
+        output_filename = f"{base_name}_posedata_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s_yolo{model_size}.npz"
         output_path = os.path.join(output_dir, output_filename)
         
         # Save compressed data

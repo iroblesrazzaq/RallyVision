@@ -3,13 +3,16 @@
 Batch processing script for the two-part pose estimation pipeline:
 Runs the pipeline on all videos in the raw_videos directory.
 
-Usage: python test_all.py [start_time] [duration] [target_fps]
+Usage: python test_all.py [start_time] [duration] [target_fps] [model_size]
   - start_time: Start time in seconds (default: 0)
   - duration: Duration in seconds (default: 60)
   - target_fps: Target frame rate for consistent temporal sampling (default: 15)
+  - model_size: YOLO model size - n, s, m, l (default: s)
 
-Example:
-  python test_all.py 0 60 15
+Examples:
+  python test_all.py 0 60 15 s
+  python test_all.py 0 30 10 n
+  python test_all.py 0 120 15 l
 """
 
 import subprocess
@@ -38,6 +41,17 @@ def run_command(cmd, description):
         return False
 
 
+def get_model_name(model_size):
+    """Get the full model name from size abbreviation."""
+    model_names = {
+        "n": "nano",
+        "s": "small", 
+        "m": "medium",
+        "l": "large"
+    }
+    return model_names.get(model_size, "unknown")
+
+
 def get_video_files():
     """Get all video files from raw_videos directory."""
     video_extensions = ['*.mp4', '*.avi', '*.mov', '*.mkv', '*.wmv']
@@ -54,7 +68,7 @@ def get_video_files():
     return video_files
 
 
-def process_single_video(video_path, start_time, duration, target_fps):
+def process_single_video(video_path, start_time, duration, target_fps, model_size="s"):
     """Process a single video through the pipeline."""
     print(f"\n{'='*80}")
     print(f"🎬 Processing: {os.path.basename(video_path)}")
@@ -72,10 +86,10 @@ def process_single_video(video_path, start_time, duration, target_fps):
         print(f"❌ Failed to create annotated video for {os.path.basename(video_path)}")
         return False
     
-    # Check output files
+    # Check output files with model size
     base_name = os.path.splitext(os.path.basename(video_path))[0]
-    pose_data_file = f"pose_data/{base_name}_posedata_{start_time}s_to_{start_time + duration}s.npz"
-    video_file = f"sanity_check_clips/{base_name}_annotated_{start_time}s_to_{start_time + duration}s.mp4"
+    pose_data_file = f"pose_data/{base_name}_posedata_{start_time}s_to_{start_time + duration}s_yolo{model_size}.npz"
+    video_file = f"sanity_check_clips/{base_name}_annotated_{start_time}s_to_{start_time + duration}s_yolo{model_size}.mp4"
     
     success = True
     if os.path.exists(pose_data_file):
@@ -101,16 +115,19 @@ def main():
         start_time = int(sys.argv[1])
         duration = int(sys.argv[2])
         target_fps = int(sys.argv[3])
+        model_size = sys.argv[4] if len(sys.argv) > 4 else "s"
     else:
         start_time = 0
         duration = 60  # Default to 60 seconds
         target_fps = 15  # Default to 15 FPS
+        model_size = "s"  # Default to small model
     
     print("🎯 Batch Processing All Videos in raw_videos Directory")
     print("=" * 80)
     print(f"Start time: {start_time}s")
     print(f"Duration: {duration}s")
     print(f"Target FPS: {target_fps}")
+    print(f"YOLO model: {model_size} ({get_model_name(model_size)})")
     
     # Get all video files
     video_files = get_video_files()
@@ -133,7 +150,7 @@ def main():
         print(f"📹 Processing video {i}/{len(video_files)}")
         print(f"{'='*80}")
         
-        if process_single_video(video_path, start_time, duration, target_fps):
+        if process_single_video(video_path, start_time, duration, target_fps, model_size):
             successful_videos += 1
         else:
             failed_videos += 1
