@@ -75,17 +75,26 @@ class VideoAnnotator:
         else:
             model_size = 's'  # Default if not found
         
-        # Extract confidence threshold from data path (assuming it's in the subdirectory name)
+        # Extract confidence threshold and time range from data path (assuming it's in the subdirectory name)
         data_dir = os.path.dirname(data_path)
-        if os.path.basename(data_dir).endswith('conf'):
-            # Extract confidence from subdirectory name like "yolom_0.05conf"
-            conf_match = re.search(r'_(\d+\.\d+)conf$', os.path.basename(data_dir))
-            confidence_threshold = conf_match.group(1) if conf_match else "0.05"
+        if os.path.basename(data_dir).endswith('s'):
+            # Extract confidence and time range from subdirectory name like "yolom_0.05conf_0s_to_60s"
+            conf_match = re.search(r'_(\d+\.\d+)conf_(\d+)s_to_(\d+)s$', os.path.basename(data_dir))
+            if conf_match:
+                confidence_threshold = conf_match.group(1)
+                start_time = conf_match.group(2)
+                end_time = conf_match.group(3)
+            else:
+                confidence_threshold = "0.05"
+                start_time = str(start_time_seconds)
+                end_time = str(start_time_seconds + duration_seconds)
         else:
             confidence_threshold = "0.05"  # Default
+            start_time = str(start_time_seconds)
+            end_time = str(start_time_seconds + duration_seconds)
         
-        # Create subdirectory with model size and confidence threshold
-        subdir_name = f"yolo{model_size}_{confidence_threshold}conf"
+        # Create subdirectory with model size, confidence threshold, and time range
+        subdir_name = f"yolo{model_size}_{confidence_threshold}conf_{start_time}s_to_{end_time}s"
         output_dir = os.path.join("sanity_check_clips", subdir_name)
         os.makedirs(output_dir, exist_ok=True)
         
@@ -180,10 +189,10 @@ if __name__ == "__main__":
     # Start timing
     script_start_time = time.time()
     
-    # Dynamically construct data path with model size and confidence threshold
+    # Dynamically construct data path with model size, confidence threshold, and time range
     base_name = os.path.splitext(os.path.basename(video_path))[0]
     confidence_threshold = "0.05"  # Default confidence threshold
-    subdir_name = f"yolo{model_size}_{confidence_threshold}conf"
+    subdir_name = f"yolo{model_size}_{confidence_threshold}conf_{start_time}s_to_{start_time + duration}s"
     data_filename = f"{base_name}_posedata_{start_time}s_to_{start_time + duration}s_yolo{model_size}.npz"
     data_path = os.path.join("pose_data", subdir_name, data_filename)
     

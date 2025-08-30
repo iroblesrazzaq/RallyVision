@@ -45,7 +45,7 @@ def get_npz_files(model_size=None):
     all_files = []
     for subdir in os.listdir(pose_data_dir):
         subdir_path = os.path.join(pose_data_dir, subdir)
-        if os.path.isdir(subdir_path) and subdir.endswith('conf'):
+        if os.path.isdir(subdir_path) and subdir.endswith('s'):  # New format ends with time range
             npz_pattern = os.path.join(subdir_path, "*.npz")
             all_files.extend(glob.glob(npz_pattern))
     

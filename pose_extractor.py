@@ -146,9 +146,9 @@ class PoseExtractor:
         else:
             model_size = 's'  # Default fallback
         
-        # Create subdirectory with model size and confidence threshold
+        # Create subdirectory with model size, confidence threshold, and time range
         confidence_threshold = 0.05  # Current confidence threshold used in the model call
-        subdir_name = f"yolo{model_size}_{confidence_threshold}conf"
+        subdir_name = f"yolo{model_size}_{confidence_threshold}conf_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s"
         output_dir = os.path.join("pose_data", subdir_name)
         os.makedirs(output_dir, exist_ok=True)
         
