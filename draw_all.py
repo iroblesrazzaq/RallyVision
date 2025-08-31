@@ -9,17 +9,21 @@ The script automatically extracts fps and confidence threshold from the director
 and passes them to the video_annotator.py script.
 
 Usage:
-    python draw_all.py [start_time] [duration] [model_size] [overwrite]
+    python draw_all.py [start_time] [duration] [target_fps] [confidence_threshold] [model_size] [overwrite]
     
     start_time: Optional start time in seconds to filter files
     duration: Optional duration in seconds to filter files  
+    target_fps: Optional target FPS to filter files
+    confidence_threshold: Optional confidence threshold to filter files
     model_size: Optional YOLO model size (n, s, m, l) to filter files
     overwrite: Optional boolean to overwrite existing annotated videos (default: False)
                Accepts: true, 1, yes, y (case insensitive)
     
     If only one argument is provided, it's treated as model_size.
     If three arguments are provided, they're treated as [start_time] [duration] [model_size].
-    If four arguments are provided, they're treated as [start_time] [duration] [model_size] [overwrite].
+    If four arguments are provided, they're treated as [start_time] [duration] [target_fps] [confidence_threshold].
+    If five arguments are provided, they're treated as [start_time] [duration] [target_fps] [confidence_threshold] [model_size].
+    If six arguments are provided, they're treated as [start_time] [duration] [target_fps] [confidence_threshold] [model_size] [overwrite].
     If no arguments are provided, processes all .npz files.
 
 Examples:
@@ -29,8 +33,10 @@ Examples:
     python draw_all.py 0 60 s                             # Process small model files from 0s to 60s
     python draw_all.py 30 60 m                            # Process medium model files from 30s to 90s
     python draw_all.py 0 120 l                            # Process large model files from 0s to 120s
-    python draw_all.py 0 60 s true                        # Process small model files from 0s to 60s, overwrite existing
-    python draw_all.py 30 60 m yes                        # Process medium model files from 30s to 90s, overwrite existing
+    python draw_all.py 0 60 15 0.05 s                    # Process small model files from 0s to 60s, 15 FPS, 0.05 conf
+    python draw_all.py 30 60 10 0.03 m                   # Process medium model files from 30s to 90s, 10 FPS, 0.03 conf
+    python draw_all.py 0 60 15 0.05 s true               # Process small model files from 0s to 60s, 15 FPS, 0.05 conf, overwrite existing
+    python draw_all.py 30 60 10 0.03 m yes               # Process medium model files from 30s to 90s, 10 FPS, 0.03 conf, overwrite existing
 """
 
 import os
@@ -41,14 +47,16 @@ import sys
 import re
 
 
-def get_npz_files(model_size=None, start_time=None, duration=None):
+def get_npz_files(model_size=None, start_time=None, duration=None, target_fps=None, confidence_threshold=None):
     """
-    Get all .npz files from pose_data subdirectories, optionally filtered by model size and time range.
+    Get all .npz files from pose_data subdirectories, optionally filtered by model size, time range, fps, and confidence threshold.
     
     Args:
         model_size (str, optional): Model size to filter by (n, s, m, l)
         start_time (int, optional): Start time in seconds to filter by
         duration (int, optional): Duration in seconds to filter by
+        target_fps (int, optional): Target FPS to filter by
+        confidence_threshold (float, optional): Confidence threshold to filter by
         
     Returns:
         list: List of .npz file paths
@@ -93,6 +101,32 @@ def get_npz_files(model_size=None, start_time=None, duration=None):
                 if file_start == start_time and file_end == end_time:
                     time_filtered.append(file_path)
         filtered_files = time_filtered
+    
+    # Filter by target FPS
+    if target_fps is not None:
+        fps_filtered = []
+        for file_path in filtered_files:
+            subdir_name = os.path.basename(os.path.dirname(file_path))
+            # Parse FPS from subdirectory like "yolom_0.05conf_15fps_30s_to_90s"
+            fps_match = re.search(r'_(\d+)fps_', subdir_name)
+            if fps_match:
+                file_fps = int(fps_match.group(1))
+                if file_fps == target_fps:
+                    fps_filtered.append(file_path)
+        filtered_files = fps_filtered
+    
+    # Filter by confidence threshold
+    if confidence_threshold is not None:
+        conf_filtered = []
+        for file_path in filtered_files:
+            subdir_name = os.path.basename(os.path.dirname(file_path))
+            # Parse confidence threshold from subdirectory like "yolom_0.05conf_15fps_30s_to_90s"
+            conf_match = re.search(r'_(\d+\.\d+)conf_', subdir_name)
+            if conf_match:
+                file_conf = float(conf_match.group(1))
+                if abs(file_conf - confidence_threshold) < 0.001:  # Use small epsilon for float comparison
+                    conf_filtered.append(file_path)
+        filtered_files = conf_filtered
     
     return filtered_files
 
@@ -191,29 +225,45 @@ def run_annotation_command(video_path, start_time, duration, target_fps, confide
 
 def main():
     # Parse command line arguments
-    if len(sys.argv) >= 5:
-        # Format: python draw_all.py [start_time] [duration] [model_size] [overwrite]
+    if len(sys.argv) >= 7:
+        # Format: python draw_all.py [start_time] [duration] [target_fps] [confidence_threshold] [model_size] [overwrite]
         start_time = int(sys.argv[1])
         duration = int(sys.argv[2])
-        model_size = sys.argv[3]
-        overwrite = sys.argv[4].lower() in ['true', '1', 'yes', 'y']
+        target_fps = int(sys.argv[3])
+        confidence_threshold = float(sys.argv[4])
+        model_size = sys.argv[5]
+        overwrite = sys.argv[6].lower() in ['true', '1', 'yes', 'y']
+    elif len(sys.argv) >= 6:
+        # Format: python draw_all.py [start_time] [duration] [target_fps] [confidence_threshold] [model_size]
+        start_time = int(sys.argv[1])
+        duration = int(sys.argv[2])
+        target_fps = int(sys.argv[3])
+        confidence_threshold = float(sys.argv[4])
+        model_size = sys.argv[5]
+        overwrite = False
     elif len(sys.argv) >= 4:
         # Format: python draw_all.py [start_time] [duration] [model_size]
         start_time = int(sys.argv[1])
         duration = int(sys.argv[2])
         model_size = sys.argv[3]
+        target_fps = None
+        confidence_threshold = None
         overwrite = False
     elif len(sys.argv) >= 2:
         # Format: python draw_all.py [model_size]
         start_time = None
         duration = None
         model_size = sys.argv[1]
+        target_fps = None
+        confidence_threshold = None
         overwrite = False
     else:
         # No arguments - process all files
         start_time = None
         duration = None
         model_size = None
+        target_fps = None
+        confidence_threshold = None
         overwrite = False
     
     print("🎨 Batch Annotating All Pose Data Files")
@@ -222,6 +272,10 @@ def main():
     if model_size and start_time is not None and duration is not None:
         print(f"Model size filter: {model_size}")
         print(f"Time range filter: {start_time}s to {start_time + duration}s")
+        if target_fps is not None:
+            print(f"Target FPS filter: {target_fps}")
+        if confidence_threshold is not None:
+            print(f"Confidence threshold filter: {confidence_threshold}")
     elif model_size:
         print(f"Model size filter: {model_size}")
     elif start_time is not None and duration is not None:
@@ -232,7 +286,7 @@ def main():
     print(f"Overwrite existing files: {overwrite}")
     
     # Get .npz files
-    npz_files = get_npz_files(model_size, start_time, duration)
+    npz_files = get_npz_files(model_size, start_time, duration, target_fps, confidence_threshold)
     
     if not npz_files:
         print("❌ No .npz files found!")
