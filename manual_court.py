@@ -1011,18 +1011,39 @@ def filter_players_by_playable_area(player_bboxes: List[Tuple[int, int, int, int
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python manual_court.py <path_to_video>")
+        sys.exit(1)
+        
+    video_path = sys.argv[1]
+    
+    if not os.path.exists(video_path):
+        print(f"Error: Video file not found at '{video_path}'")
+        sys.exit(1)
+
     # Initialize the court detector
     detector = CourtDetector()
     
-    # Example video path
-    video_path = "raw_videos/Monica Greene unedited tennis match play.mp4"
+    # Process the video and get the mask
+    out_mask, clean_frame, metadata = detector.process_video(video_path, target_time=60)
     
-    # Process the video
-    processed_frame_with_lines, clean_frame, metadata = detector.process_video(video_path)
-    
-    print("Processing complete!")
-    print(f"Metadata: {metadata}")
-    
-    # Save the processed frame with lines
-    cv2.imwrite("court_lines_result.png", processed_frame_with_lines)
-    print("Court lines result saved as 'court_lines_result.png'")
+    if out_mask is not None and np.any(out_mask):
+        # Create court_masks directory if it doesn't exist
+        os.makedirs("court_masks", exist_ok=True)
+        
+        # Save the mask with descriptive filename
+        base_name = os.path.splitext(os.path.basename(video_path))[0]
+        mask_path = f"court_masks/{base_name}_mask.png"
+        cv2.imwrite(mask_path, out_mask)
+        
+        print(f"\n✅ Successfully generated and saved mask for {os.path.basename(video_path)}")
+        print(f"   - Mask Path: {mask_path}")
+        print(f"   - Metadata: {metadata}")
+        
+        # Save a visualization frame for checking
+        masked_frame = cv2.bitwise_and(clean_frame, clean_frame, mask=~out_mask)  # invert mask for viewing
+        cv2.imwrite("court_detection_visualization.png", masked_frame)
+        print("   - Visualization saved to 'court_detection_visualization.png'")
+    else:
+        print(f"\n❌ Failed to generate mask for {os.path.basename(video_path)}")
+        print(f"   - Reason: {metadata.get('error', 'Unknown error')}")

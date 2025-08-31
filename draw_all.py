@@ -192,7 +192,7 @@ def extract_video_info_from_filename(npz_path):
     }
 
 
-def run_annotation_command(video_path, start_time, duration, target_fps, confidence_threshold, model_size):
+def run_annotation_command(video_path, start_time, duration, target_fps, confidence_threshold, model_size, overwrite=False):
     """
     Run the video annotation command.
     
@@ -203,11 +203,14 @@ def run_annotation_command(video_path, start_time, duration, target_fps, confide
         target_fps (int): Target frame rate
         confidence_threshold (float): Confidence threshold
         model_size (str): Model size
+        overwrite (bool): Overwrite existing files
         
     Returns:
         bool: True if successful, False otherwise
     """
     cmd = ["python", "video_annotator.py", str(start_time), str(duration), str(target_fps), str(confidence_threshold), video_path, model_size]
+    if overwrite:
+        cmd.append("true")
     
     print(f"🔄 Running: {' '.join(cmd)}")
     
@@ -345,7 +348,8 @@ def main():
             info['duration'], 
             info['target_fps'],
             info['confidence_threshold'],
-            info['model_size']
+            info['model_size'],
+            overwrite
         ):
             successful += 1
         else:

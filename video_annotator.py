@@ -23,7 +23,7 @@ class VideoAnnotator:
         self.keypoint_threshold = keypoint_draw_threshold
         print(f"Keypoint draw threshold: {self.keypoint_threshold}")
     
-    def annotate_video(self, video_path, data_path, start_time_seconds=0, duration_seconds=60):
+    def annotate_video(self, video_path, data_path, start_time_seconds=0, duration_seconds=60, overwrite=False):
         """
         Create an annotated video from pose data and original video.
         
@@ -32,6 +32,7 @@ class VideoAnnotator:
             data_path (str): Path to the .npz pose data file
             start_time_seconds (int): Start time in seconds (default: 0)
             duration_seconds (int): Duration to process in seconds (default: 60)
+            overwrite (bool): Overwrite existing video file (default: False)
             
         Returns:
             str: Path to the created annotated video file
@@ -104,15 +105,33 @@ class VideoAnnotator:
             start_time = str(start_time_seconds)
             end_time = str(start_time_seconds + duration_seconds)
         
+        # Check if this is filtered data (court_filter_ prefix in directory name)
+        data_dir_name = os.path.basename(data_dir)
+        is_filtered = data_dir_name.startswith('court_filter_')
+        
         # Create subdirectory with model size, confidence threshold, fps, and time range
         subdir_name = f"yolo{model_size}_{confidence_threshold}conf_{fps}fps_{start_time}s_to_{end_time}s"
-        output_dir = os.path.join("sanity_check_clips", subdir_name)
+        
+        # Choose output directory based on whether data is filtered
+        if is_filtered:
+            output_dir = os.path.join("sanity_check_clips", "court_filtered", subdir_name)
+        else:
+            output_dir = os.path.join("sanity_check_clips", "unfiltered", subdir_name)
+        
         os.makedirs(output_dir, exist_ok=True)
         
         # Construct output filename
         base_name = os.path.splitext(os.path.basename(video_path))[0]
         output_filename = f"{base_name}_annotated_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s_yolo{model_size}.mp4"
         output_path = os.path.join(output_dir, output_filename)
+        
+        # Check if output file already exists
+        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            if overwrite:
+                print(f"🔄 Output file exists, overwriting: {output_path}")
+            else:
+                print(f"✓ Output file already exists, skipping: {output_path}")
+                return output_path
         
         # Initialize video writer with original video FPS
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -207,6 +226,7 @@ if __name__ == "__main__":
         confidence_threshold = float(sys.argv[4]) if len(sys.argv) > 4 else 0.05
         video_path = sys.argv[5] if len(sys.argv) > 5 else "raw_videos/Monica Greene unedited tennis match play.mp4"
         model_size = sys.argv[6] if len(sys.argv) > 6 else "s"
+        overwrite = sys.argv[7].lower() in ['true', '1', 'yes', 'y'] if len(sys.argv) > 7 else False
     else:
         start_time = 0
         duration = 10  # Default to 10 seconds for testing
@@ -214,6 +234,7 @@ if __name__ == "__main__":
         confidence_threshold = 0.05
         video_path = "raw_videos/Monica Greene unedited tennis match play.mp4"
         model_size = "s"
+        overwrite = False
     
     # Start timing
     script_start_time = time.time()
@@ -236,7 +257,8 @@ if __name__ == "__main__":
         video_path=video_path,
         data_path=data_path,
         start_time_seconds=start_time,
-        duration_seconds=duration
+        duration_seconds=duration,
+        overwrite=overwrite
     )
     
     if output_path is None:
