@@ -5,3 +5,5 @@
 repomix-output.xml
 *.npz
 *.pt
+*.pyc
+*cpython*
