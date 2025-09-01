@@ -195,6 +195,21 @@ def main():
                 print(f"  Metadata: {metadata}")
                 court_filtering_enabled = True
                 
+                # Save the court mask for later use in visualization
+                try:
+                    # Create court_masks directory if it doesn't exist
+                    os.makedirs("court_masks", exist_ok=True)
+                    
+                    # Extract base video name from video path
+                    base_name = os.path.splitext(os.path.basename(args.video_path))[0]
+                    mask_path = f"court_masks/{base_name}_court_mask.npz"
+                    
+                    # Save the mask as compressed numpy array
+                    np.savez_compressed(mask_path, mask=mask, metadata=metadata)
+                    print(f"✓ Court mask saved to: {mask_path}")
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not save court mask: {e}")
+                
         except Exception as e:
             print(f"❌ Error during court detection: {e}")
             print(f"  Continuing without court filtering...")

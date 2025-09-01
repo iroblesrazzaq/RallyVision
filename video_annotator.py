@@ -109,6 +109,23 @@ class VideoAnnotator:
         data_dir_name = os.path.basename(data_dir)
         is_filtered = data_dir_name.startswith('court_filtered_')
         
+        # Load court mask if this is filtered data
+        court_mask = None
+        if is_filtered:
+            try:
+                # Try to load the court mask for this video
+                base_name = os.path.splitext(os.path.basename(video_path))[0]
+                mask_path = f"court_masks/{base_name}_court_mask.npz"
+                
+                if os.path.exists(mask_path):
+                    mask_data = np.load(mask_path, allow_pickle=True)
+                    court_mask = mask_data['mask']
+                    print(f"✓ Loaded court mask: {court_mask.shape}")
+                else:
+                    print(f"⚠️  Court mask not found: {mask_path}")
+            except Exception as e:
+                print(f"⚠️  Warning: Could not load court mask: {e}")
+        
         # Create subdirectory with model size, confidence threshold, fps, and time range
         # Use integer FPS to match the directory naming convention from filtering
         fps_int = int(fps)
@@ -165,6 +182,10 @@ class VideoAnnotator:
                 print(f"Error reading frame {i + start_frame}")
                 break
             
+            # Apply court mask overlay to all frames (if available)
+            if court_mask is not None:
+                self._draw_court_mask_overlay(frame, court_mask)
+            
             # Get pose data for this frame - pose data is already aligned with original video frames
             frame_pose_data = pose_data[i]
             
@@ -191,7 +212,7 @@ class VideoAnnotator:
     
     def _draw_annotations(self, frame, frame_pose_data):
         """
-        Draw bounding boxes and keypoints on a frame.
+        Draw bounding boxes, keypoints, centroids, and court mask on a frame.
         
         Args:
             frame: OpenCV frame to draw on
@@ -201,13 +222,18 @@ class VideoAnnotator:
         keypoints = frame_pose_data['keypoints']
         confidences = frame_pose_data['conf']
         
-        # Draw bounding boxes and keypoints for each detected person
+        # Draw bounding boxes, keypoints, and centroids for each detected person
         for person_idx in range(len(boxes)):
             # Draw bounding box
             if len(boxes) > 0:
                 box = boxes[person_idx]
                 x1, y1, x2, y2 = map(int, box)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                
+                # Calculate and draw centroid with pink dot
+                center_x = int((x1 + x2) / 2)
+                center_y = int((y1 + y2) / 2)
+                cv2.circle(frame, (center_x, center_y), 5, (147, 20, 255), -1)  # Pink dot
             
             # Draw keypoints
             if len(keypoints) > 0 and len(confidences) > 0:
@@ -217,6 +243,40 @@ class VideoAnnotator:
                 for kp_idx, (kp_x, kp_y) in enumerate(person_keypoints):
                     if person_conf[kp_idx] >= self.keypoint_threshold:
                         cv2.circle(frame, (int(kp_x), int(kp_y)), 3, (0, 0, 255), -1)
+    
+    def _draw_court_mask_overlay(self, frame, court_mask):
+        """
+        Draw the court mask overlay on the frame.
+        
+        Args:
+            frame: OpenCV frame to draw on
+            court_mask: Binary mask where white (255) represents areas outside the playable court
+        """
+        if court_mask is None:
+            return
+        
+        # Create a transparent grey overlay for "out" areas
+        # Convert frame to float for alpha blending
+        frame_float = frame.astype(np.float32) / 255.0
+        
+        # Create grey overlay (0.5, 0.5, 0.5) for out areas
+        grey_overlay = np.zeros_like(frame_float)
+        grey_overlay[:, :, 0] = 0.5  # Blue channel
+        grey_overlay[:, :, 1] = 0.5  # Green channel  
+        grey_overlay[:, :, 2] = 0.5  # Red channel
+        
+        # Apply mask: where mask is white (255), use grey overlay
+        # where mask is black (0), keep original frame
+        mask_normalized = court_mask.astype(np.float32) / 255.0
+        
+        # Expand mask to 3 channels
+        mask_3d = np.stack([mask_normalized] * 3, axis=2)
+        
+        # Blend: out areas get grey overlay, in areas stay original
+        blended = frame_float * (1 - mask_3d) + grey_overlay * mask_3d
+        
+        # Convert back to uint8
+        frame[:] = (blended * 255).astype(np.uint8)
 
 
 if __name__ == "__main__":
