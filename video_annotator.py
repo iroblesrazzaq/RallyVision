@@ -255,25 +255,27 @@ class VideoAnnotator:
         if court_mask is None:
             return
         
-        # Create a transparent grey overlay for "out" areas
+        # Create a transparent overlay for "out" areas
         # Convert frame to float for alpha blending
         frame_float = frame.astype(np.float32) / 255.0
         
-        # Create grey overlay (0.5, 0.5, 0.5) for out areas
-        grey_overlay = np.zeros_like(frame_float)
-        grey_overlay[:, :, 0] = 0.5  # Blue channel
-        grey_overlay[:, :, 1] = 0.5  # Green channel  
-        grey_overlay[:, :, 2] = 0.5  # Red channel
+        # Create a semi-transparent overlay for out areas
+        # Use a subtle tint that doesn't completely block the view
+        overlay = np.zeros_like(frame_float)
         
-        # Apply mask: where mask is white (255), use grey overlay
-        # where mask is black (0), keep original frame
+        # Apply a subtle red tint to "out" areas (very transparent)
+        # This will make out areas slightly reddish but still visible
         mask_normalized = court_mask.astype(np.float32) / 255.0
+        alpha = 0.3  # Very low alpha for transparency (0.0 = fully transparent, 1.0 = fully opaque)
         
         # Expand mask to 3 channels
         mask_3d = np.stack([mask_normalized] * 3, axis=2)
         
-        # Blend: out areas get grey overlay, in areas stay original
-        blended = frame_float * (1 - mask_3d) + grey_overlay * mask_3d
+        # Apply subtle red tint to out areas while keeping them mostly transparent
+        overlay[:, :, 2] = mask_normalized * alpha  # Add red channel
+        
+        # Blend: out areas get subtle red tint, in areas stay original
+        blended = frame_float * (1 - mask_3d * alpha) + overlay
         
         # Convert back to uint8
         frame[:] = (blended * 255).astype(np.uint8)
