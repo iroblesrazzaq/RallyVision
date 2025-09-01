@@ -213,7 +213,7 @@ def main():
             print(f"⚠️  Skipping {os.path.basename(video_path)} - could not determine duration")
             continue
         
-        # Take a single 10-minute sample from the middle of the video
+        # Take a single 2-minute sample from the beginning of the video
         if duration <= sample_duration_seconds:
             # Video is shorter than requested sample, use the whole video
             segment_start = 0
@@ -221,11 +221,11 @@ def main():
             print(f"📊 Video duration: {duration:.1f}s ({duration/60:.1f} minutes)")
             print(f"📊 Using entire video (shorter than {segment_duration_minutes} minutes)")
         else:
-            # Start from 25% into the video to avoid intro/outro
-            segment_start = int(duration * 0.25)
-            actual_segment_duration = min(sample_duration_seconds, duration - segment_start)
+            # Start from the beginning (t=0) for consistent frame alignment
+            segment_start = 0
+            actual_segment_duration = min(sample_duration_seconds, duration)
             print(f"📊 Video duration: {duration:.1f}s ({duration/60:.1f} minutes)")
-            print(f"📊 Taking {actual_segment_duration/60:.1f} minute sample from {segment_start/60:.1f}s to {(segment_start + actual_segment_duration)/60:.1f}s")
+            print(f"📊 Taking {actual_segment_duration/60:.1f} minute sample from 0s to {actual_segment_duration/60:.1f}s")
         
         print(f"\n🎬 Processing single sample: {segment_start}s to {segment_start + actual_segment_duration}s ({actual_segment_duration}s)")
         
@@ -237,6 +237,40 @@ def main():
             continue
         
         print(f"📁 Found pose data: {os.path.basename(pose_data_path)}")
+        
+        # DEBUG: Print time dimension lengths
+        print(f"🔍 DEBUG: Analyzing time dimensions...")
+        
+        # Get video FPS and calculate expected frame count
+        try:
+            import cv2
+            cap = cv2.VideoCapture(video_path)
+            video_fps = cap.get(cv2.CAP_PROP_FPS)
+            expected_frames = int(actual_segment_duration * video_fps)
+            cap.release()
+            print(f"   📹 Video: {expected_frames} frames at {video_fps:.1f} FPS for {actual_segment_duration}s segment")
+        except Exception as e:
+            print(f"   ⚠️  Could not get video FPS: {e}")
+            expected_frames = "unknown"
+        
+        # Get pose data array length
+        try:
+            import numpy as np
+            pose_data = np.load(pose_data_path, allow_pickle=True)
+            pose_frames = len(pose_data['frames'])
+            print(f"   📊 Pose data: {pose_frames} frames in .npz file")
+            
+            if expected_frames != "unknown":
+                if pose_frames == expected_frames:
+                    print(f"   ✅ Frame counts match! Video and pose data are aligned.")
+                else:
+                    print(f"   ❌ MISMATCH! Video has {expected_frames} frames, pose data has {pose_frames} frames")
+                    print(f"   💡 This explains the timing sync issue!")
+            else:
+                print(f"   ⚠️  Cannot verify alignment (video FPS unknown)")
+                
+        except Exception as e:
+            print(f"   ⚠️  Could not read pose data: {e}")
         
         # Check if output video already exists
         base_name = os.path.splitext(os.path.basename(video_path))[0]
