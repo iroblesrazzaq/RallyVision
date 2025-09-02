@@ -12,16 +12,21 @@ class VideoAnnotator:
     annotated videos without requiring torch or ultralytics.
     """
     
-    def __init__(self, keypoint_draw_threshold=0.5):
+    def __init__(self, keypoint_draw_threshold=0.5, check_mode=False):
         """
         Initialize the VideoAnnotator.
         
         Args:
             keypoint_draw_threshold (float): Confidence threshold for drawing keypoints.
                                             Defaults to 0.5
+            check_mode (bool): If True, draw blue boxes for out-of-court centroids, green for in-court.
+                              Defaults to False
         """
         self.keypoint_threshold = keypoint_draw_threshold
+        self.check_mode = check_mode
         print(f"Keypoint draw threshold: {self.keypoint_threshold}")
+        if self.check_mode:
+            print("Check mode enabled: Blue boxes for out-of-court centroids, green for in-court")
     
     def annotate_video(self, video_path, data_path, start_time_seconds=0, duration_seconds=60, overwrite=False):
         """
@@ -109,9 +114,9 @@ class VideoAnnotator:
         data_dir_name = os.path.basename(data_dir)
         is_filtered = data_dir_name.startswith('court_filtered_')
         
-        # Load court mask if this is filtered data
+        # Load court mask if this is filtered data or in check mode
         court_mask = None
-        if is_filtered:
+        if is_filtered or self.check_mode:
             try:
                 # Try to load the court mask for this video
                 base_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -123,16 +128,24 @@ class VideoAnnotator:
                     print(f"✓ Loaded court mask: {court_mask.shape}")
                 else:
                     print(f"⚠️  Court mask not found: {mask_path}")
+                    if self.check_mode:
+                        print("⚠️  Check mode requires court mask - falling back to normal mode")
+                        self.check_mode = False
             except Exception as e:
                 print(f"⚠️  Warning: Could not load court mask: {e}")
+                if self.check_mode:
+                    print("⚠️  Check mode requires court mask - falling back to normal mode")
+                    self.check_mode = False
         
         # Create subdirectory with model size, confidence threshold, fps, and time range
         # Use integer FPS to match the directory naming convention from filtering
         fps_int = int(fps)
         subdir_name = f"yolo{model_size}_{confidence_threshold}conf_{fps_int}fps_{start_time}s_to_{end_time}s"
         
-        # Choose output directory based on whether data is filtered
-        if is_filtered:
+        # Choose output directory based on whether data is filtered or in check mode
+        if self.check_mode:
+            output_dir = os.path.join("check", subdir_name)
+        elif is_filtered:
             output_dir = os.path.join("sanity_check_clips", "court_filtered", subdir_name)
         else:
             output_dir = os.path.join("sanity_check_clips", "unfiltered", subdir_name)
@@ -193,7 +206,7 @@ class VideoAnnotator:
             # Only draw annotations if this frame has pose data (non-empty)
             if len(frame_pose_data['boxes']) > 0 or len(frame_pose_data['keypoints']) > 0:
                 # Draw annotations
-                self._draw_annotations(frame, frame_pose_data)
+                self._draw_annotations(frame, frame_pose_data, court_mask)
             
             # Write frame to video (all frames, modified or not)
             out.write(frame)
@@ -211,13 +224,14 @@ class VideoAnnotator:
         print(f"✓ Annotated video saved to: {output_path}")
         return output_path
     
-    def _draw_annotations(self, frame, frame_pose_data):
+    def _draw_annotations(self, frame, frame_pose_data, court_mask=None):
         """
         Draw bounding boxes, keypoints, centroids, and court mask on a frame.
         
         Args:
             frame: OpenCV frame to draw on
             frame_pose_data: Dictionary containing 'boxes', 'keypoints', and 'conf'
+            court_mask: Optional court mask for check mode coloring
         """
         boxes = frame_pose_data['boxes']
         keypoints = frame_pose_data['keypoints']
@@ -229,11 +243,26 @@ class VideoAnnotator:
             if len(boxes) > 0:
                 box = boxes[person_idx]
                 x1, y1, x2, y2 = map(int, box)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 
-                # Calculate and draw centroid with pink dot
+                # Calculate centroid
                 center_x = int((x1 + x2) / 2)
                 center_y = int((y1 + y2) / 2)
+                
+                # Determine box color based on check mode and centroid location
+                if self.check_mode and court_mask is not None:
+                    # Check if centroid is in playable area (mask[y, x] == 0 means inside)
+                    if (0 <= center_y < court_mask.shape[0] and 
+                        0 <= center_x < court_mask.shape[1] and 
+                        court_mask[center_y, center_x] == 0):
+                        box_color = (0, 255, 0)  # Green for in-court
+                    else:
+                        box_color = (255, 0, 0)  # Blue for out-of-court
+                else:
+                    box_color = (0, 255, 0)  # Default green
+                
+                cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
+                
+                # Calculate and draw centroid with pink dot
                 cv2.circle(frame, (center_x, center_y), 5, (147, 20, 255), -1)  # Pink dot
             
             # Draw keypoints
@@ -294,10 +323,12 @@ if __name__ == "__main__":
         overwrite = sys.argv[7].lower() in ['true', '1', 'yes', 'y'] if len(sys.argv) > 7 else False
         # Check for optional --data-path parameter
         data_path_override = None
+        check_mode = False
         for i, arg in enumerate(sys.argv):
             if arg == "--data-path" and i + 1 < len(sys.argv):
                 data_path_override = sys.argv[i + 1]
-                break
+            elif arg == "--check-mode":
+                check_mode = True
     else:
         start_time = 0
         duration = 10  # Default to 10 seconds for testing
@@ -307,6 +338,7 @@ if __name__ == "__main__":
         model_size = "s"
         overwrite = False
         data_path_override = None
+        check_mode = False
     
     # Start timing
     script_start_time = time.time()
@@ -324,7 +356,7 @@ if __name__ == "__main__":
         data_path = os.path.join("pose_data", "unfiltered", subdir_name, data_filename)
     
     print("Initializing VideoAnnotator...")
-    video_annotator = VideoAnnotator()
+    video_annotator = VideoAnnotator(check_mode=check_mode)
     
     print(f"Video path: {video_path}")
     print(f"Data path: {data_path}")
