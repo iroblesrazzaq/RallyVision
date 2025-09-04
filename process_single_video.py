@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-CLI tool to process a single video file with the heuristic processor.
+CLI tool to process a single video file with the data processor.
 """
 
 import argparse
 import os
 import cv2
 import numpy as np
-from heuristic_processor import HeuristicProcessor
+from data_processor import DataProcessor
 
 def draw_bounding_box_with_label(frame, box, label, color=(0, 255, 0)):
     """Draw a bounding box with a label on the frame."""
@@ -16,11 +16,11 @@ def draw_bounding_box_with_label(frame, box, label, color=(0, 255, 0)):
     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
 def process_single_video(npz_path, video_path, output_path):
-    """Process a single video file with the heuristic processor."""
+    """Process a single video file with the data processor."""
     print(f"Processing {video_path}...")
     
-    # Initialize the heuristic processor
-    processor = HeuristicProcessor(screen_width=1280, screen_height=720)
+    # Initialize the data processor
+    processor = DataProcessor(screen_width=1280, screen_height=720)
     
     # Load the filtered pose data
     try:
@@ -59,7 +59,7 @@ def process_single_video(npz_path, video_path, output_path):
         if frame_idx < len(all_frames_data):
             frame_data = all_frames_data[frame_idx]
             
-            # Apply the heuristic processor
+            # Apply the data processor
             assigned_players = processor.assign_players(frame_data)
             
             # Draw bounding boxes with labels
@@ -93,7 +93,7 @@ def process_single_video(npz_path, video_path, output_path):
     print(f"Finished processing. Output saved to {output_path}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Process a single video file with the heuristic processor")
+    parser = argparse.ArgumentParser(description="Process a single video file with the data processor")
     parser.add_argument("npz_path", help="Path to the filtered pose data .npz file")
     parser.add_argument("video_path", help="Path to the input video file")
     parser.add_argument("output_path", help="Path for the output annotated video file")

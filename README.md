@@ -4,28 +4,39 @@ Implementation: Using YOLOv8, track player bounding boxes to estimate their pose
 then use movenet pose features, as well as engineered features (velocity, acceleration, etc) for both players
 to feed into an LSTM that returns the confidence that a given frame (given the past n frames) is during a point or not. 
 
+## Data Processing Pipeline
 
+The pipeline now includes a `DataProcessor` class that handles:
+1. Player assignment using heuristic logic (near/far player detection)
+2. Feature engineering including centroid, velocity, and acceleration calculation for both player and keypoints
+3. Creation of LSTM-ready feature vectors with proper handling of missing data
 
+### Feature Vector Structure
+- Total size: 260 elements (130 per player × 2 players)
+- Per player structure:
+  - 1 element: Presence indicator (1.0 = present, -1.0 = absent)
+  - 4 elements: Bounding box coordinates [x1, y1, x2, y2]
+  - 2 elements: Centroid coordinates (center_x, center_y)
+  - 2 elements: Player velocity components (vx, vy)
+  - 2 elements: Player acceleration components (ax, ay)
+  - 34 elements: Keypoint coordinates [x1, y1, x2, y2, ..., x17, y17]
+  - 17 elements: Keypoint confidence scores
+  - 34 elements: Keypoint velocity components [vx1, vy1, ..., vx17, vy17]
+  - 34 elements: Keypoint acceleration components [ax1, ay1, ..., ax17, ay17]
 
-
+Missing players are represented with -1 values for position data and 0 for velocity/acceleration, which are outside the valid coordinate range [0, width/height].
 
 Current:
 create MVP model
-
-
-
+integrate DataProcessor class into pipeline
+add centroid, velocity, and acceleration feature engineering for both player and keypoints
 
 Later:
 look into LSD instead of Hough for line detection, further court detection optimizations
 
-
-
 Done:
-
-
 August 27, 2025:
 - working on court detection for bounding box masking to only capture the players in the relevant playing area
-
 - issue - players blocking lines in randomly selected frame -> incomplete baseline (mostly baseline suffers from this issues) - what to do?
     - can we sample a few frames and overlay all their candidate lines for this?
 

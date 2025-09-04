@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Visualization script for the heuristic processor.
-Processes filtered pose data, applies the heuristic processor, and annotates videos with player assignments.
+Visualization script for the data processor.
+Processes filtered pose data, applies the data processor, and annotates videos with player assignments.
 """
 
 import argparse
 import os
 import cv2
 import numpy as np
-from heuristic_processor import HeuristicProcessor
+from data_processor import DataProcessor
 
 def draw_bounding_box_with_label(frame, box, label, color=(0, 255, 0)):
     """Draw a bounding box with a label on the frame."""
@@ -16,13 +16,13 @@ def draw_bounding_box_with_label(frame, box, label, color=(0, 255, 0)):
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
-def process_video_with_heuristic(input_dir, output_dir):
+def process_video_with_data_processor(input_dir, output_dir):
     """Process all filtered pose data files and create annotated videos."""
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
     
-    # Initialize the heuristic processor
-    processor = HeuristicProcessor(screen_width=1280, screen_height=720)
+    # Initialize the data processor
+    processor = DataProcessor(screen_width=1280, screen_height=720)
     
     # Process each .npz file in the input directory
     for filename in os.listdir(input_dir):
@@ -78,7 +78,7 @@ def process_video_with_heuristic(input_dir, output_dir):
                 if frame_idx < len(all_frames_data):
                     frame_data = all_frames_data[frame_idx]
                     
-                    # Apply the heuristic processor
+                    # Apply the data processor
                     assigned_players = processor.assign_players(frame_data)
                     
                     # Draw bounding boxes with labels
@@ -122,7 +122,7 @@ def main():
         print(f"Input directory does not exist: {args.input_dir}")
         return
     
-    process_video_with_heuristic(args.input_dir, args.output_dir)
+    process_video_with_data_processor(args.input_dir, args.output_dir)
 
 if __name__ == "__main__":
     main()
