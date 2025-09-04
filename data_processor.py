@@ -1,10 +1,10 @@
-# heuristic_processor.py
+# data_processor.py
 import numpy as np
 
-class HeuristicProcessor:
+class DataProcessor:
     """
-    Implements the refined heuristic (v3) to process pose data.
-    It separates player assignment from feature engineering for flexibility.
+    Processes pose data and extracts features for tennis player tracking.
+    Separates data processing from feature engineering for flexibility.
     """
     def __init__(self, screen_width=1280, screen_height=720, merge_iou_thresh=0.6):
         self.screen_width = screen_width
@@ -19,8 +19,6 @@ class HeuristicProcessor:
 
     def _calculate_iou(self, box1, box2):
         """Calculate the Intersection over Union of two bounding boxes."""
-        # [Implement the standard IoU calculation logic here]
-        # This calculates the intersection over union of two bounding boxes.
         x1_inter = max(box1[0], box2[0])
         y1_inter = max(box1[1], box2[1])
         x2_inter = min(box1[2], box2[2])
@@ -33,8 +31,6 @@ class HeuristicProcessor:
 
     def _conditional_merge_boxes(self, boxes, keypoints, confs):
         """Implement the conditional merge logic for edge-zone merging."""
-        # [Implement the conditional merge logic here]
-        # This method should only merge boxes if their clump is in an edge zone.
         if len(boxes) <= 1:
             return boxes, keypoints, confs
 
@@ -132,10 +128,24 @@ class HeuristicProcessor:
             
         return assigned_players
 
+    def _calculate_centroid(self, box):
+        """
+        Calculate the centroid (center point) of a bounding box.
+        
+        Args:
+            box (np.array): Bounding box coordinates [x1, y1, x2, y2]
+            
+        Returns:
+            tuple: (center_x, center_y) coordinates of the centroid
+        """
+        center_x = (box[0] + box[2]) / 2
+        center_y = (box[1] + box[3]) / 2
+        return (center_x, center_y)
+
     def create_feature_vector(self, assigned_players, num_keypoints=17):
         """
         Creates a fixed-size 1D NumPy vector from the assigned player data.
-        This is the designated place for future feature engineering.
+        This is the designated place for feature engineering.
         
         For missing players, -1 values are used to represent absent data,
         which is outside the valid coordinate range and clearly identifiable.
@@ -147,8 +157,8 @@ class HeuristicProcessor:
         Returns:
             np.ndarray: A flat vector ready for the LSTM.
         """
-        # Define the structure: 1 (exists) + 4 (bbox) + 17*2 (kp_xy) + 17 (kp_conf) = 56 features per player
-        features_per_player = 1 + 4 + (num_keypoints * 3)
+        # Define the structure: 1 (exists) + 4 (bbox) + 2 (centroid) + 17*2 (kp_xy) + 17 (kp_conf) = 58 features per player
+        features_per_player = 1 + 4 + 2 + (num_keypoints * 3)  # Added 2 for centroid
         vector = np.full(features_per_player * 2, -1.0)  # Use -1 for missing values
 
         # --- Near Player ---
@@ -156,16 +166,16 @@ class HeuristicProcessor:
             player_data = assigned_players['near_player']
             # Mark as present
             vector[0] = 1.0
-            # Basic Features
+            # Calculate centroid
+            centroid = self._calculate_centroid(player_data['box'])
+            # Basic Features + Centroid
             flat_features = np.concatenate([
                 player_data['box'],
+                centroid,
                 player_data['keypoints'].flatten(),
                 player_data['conf']
             ])
             vector[1:features_per_player] = flat_features
-            
-            # **FUTURE:** Add engineered features here (e.g., velocity, acceleration)
-            # by appending them to `flat_features` and adjusting `features_per_player`.
             
         # --- Far Player ---
         offset = features_per_player
@@ -173,9 +183,12 @@ class HeuristicProcessor:
             player_data = assigned_players['far_player']
             # Mark as present
             vector[offset] = 1.0
-            # Basic Features
+            # Calculate centroid
+            centroid = self._calculate_centroid(player_data['box'])
+            # Basic Features + Centroid
             flat_features = np.concatenate([
                 player_data['box'],
+                centroid,
                 player_data['keypoints'].flatten(),
                 player_data['conf']
             ])
@@ -185,10 +198,10 @@ class HeuristicProcessor:
 
 # --- Example Usage (can be placed in a separate main script) ---
 #
-# from heuristic_processor import HeuristicProcessor
+# from data_processor import DataProcessor
 #
 # # 1. Initialize the processor
-# processor = HeuristicProcessor(screen_width=1280, screen_height=720)
+# processor = DataProcessor(screen_width=1280, screen_height=720)
 #
 # # 2. Load the court-filtered data
 # npz_path = 'path/to/your/court_filtered_data.npz'
