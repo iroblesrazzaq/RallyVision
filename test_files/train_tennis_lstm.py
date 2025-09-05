@@ -15,9 +15,7 @@ def main():
     """Main training function."""
     parser = argparse.ArgumentParser(description='Train Tennis Point Detection LSTM')
     parser.add_argument('--data_dir', type=str, required=True,
-                        help='Directory containing feature vector .npy files')
-    parser.add_argument('--annotations_dir', type=str, required=True,
-                        help='Directory containing annotation CSV files')
+                        help='Directory containing feature vector .npy files and status files')
     parser.add_argument('--model_save_path', type=str, default='tennis_point_lstm.pth',
                         help='Path to save trained model')
     parser.add_argument('--batch_size', type=int, default=32,
@@ -41,13 +39,9 @@ def main():
     
     args = parser.parse_args()
     
-    # Check if directories exist
+    # Check if directory exists
     if not os.path.exists(args.data_dir):
         print(f"Error: Data directory {args.data_dir} does not exist")
-        return
-    
-    if not os.path.exists(args.annotations_dir):
-        print(f"Error: Annotations directory {args.annotations_dir} does not exist")
         return
     
     print("Initializing data loaders...")
@@ -55,7 +49,6 @@ def main():
     # Create data loaders
     train_loader, val_loader, test_loader = create_data_loaders(
         data_dir=args.data_dir,
-        annotations_dir=args.annotations_dir,
         batch_size=args.batch_size,
         sequence_length=args.sequence_length,
         feature_vector_size=args.feature_vector_size,

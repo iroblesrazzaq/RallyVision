@@ -138,6 +138,11 @@ def filter_single_npz_file(input_npz_path, output_npz_path, mask=None):
                 'keypoints': np.array(kept_keypoints),
                 'conf': np.array(kept_conf)
             }
+            
+            # Preserve annotation status if it exists in the original frame data
+            if 'annotation_status' in frame_data:
+                filtered_frame['annotation_status'] = frame_data['annotation_status']
+            
             filtered_frames_data.append(filtered_frame)
         
         # Create output directory if it doesn't exist

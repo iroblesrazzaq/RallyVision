@@ -33,7 +33,7 @@ class PoseExtractor:
         self.model = YOLO(model_path)
         print(f"YOLOv8-pose model loaded successfully from: {model_path}")
     
-    def extract_pose_data(self, video_path, confidence_threshold, start_time_seconds=0, duration_seconds=60, target_fps=15):
+    def extract_pose_data(self, video_path, confidence_threshold, start_time_seconds=0, duration_seconds=60, target_fps=15, annotations_csv=None):
         """
         Extract raw pose data from a video segment and save to .npz file.
         
@@ -43,6 +43,7 @@ class PoseExtractor:
             start_time_seconds (int): Start time in seconds (default: 0)
             duration_seconds (int): Duration to process in seconds (default: 60)
             target_fps (int): Target frame rate for consistent temporal sampling (default: 15)
+            annotations_csv (str): Path to CSV file with point annotations (optional)
             
         Returns:
             str: Path to the created .npz file
@@ -75,6 +76,16 @@ class PoseExtractor:
         # Initialize list to store all frame data
         all_frames_data = []
         total_frames_to_process = end_frame - start_frame
+        
+        # Load annotations if provided
+        annotations = None
+        if annotations_csv and os.path.exists(annotations_csv):
+            try:
+                import pandas as pd
+                annotations = pd.read_csv(annotations_csv)
+                print(f"Loaded annotations from {annotations_csv}")
+            except Exception as e:
+                print(f"Warning: Could not load annotations from {annotations_csv}: {e}")
         
         print("Extracting pose data...")
         processed_frames = 0
@@ -126,14 +137,28 @@ class PoseExtractor:
                     frame_data['keypoints'] = np.array([])
                     frame_data['conf'] = np.array([])
                 
+                # Add annotation status (-100 for skipped frames, 0/1 for annotated frames)
+                frame_data['annotation_status'] = 0  # Default to not in play
+                
+                # Check if this frame is in any annotated point interval
+                if annotations is not None:
+                    frame_time = start_time_seconds + (i / fps)
+                    for _, row in annotations.iterrows():
+                        start_time = row['start_frame'] / target_fps  # Assuming start_frame is in frame numbers
+                        end_time = row['end_frame'] / target_fps      # Assuming end_frame is in frame numbers
+                        if start_time <= frame_time <= end_time:
+                            frame_data['annotation_status'] = 1  # In play
+                            break
+                
                 all_frames_data.append(frame_data)
                 processed_frames += 1
             else:
-                # Skip this frame - add empty data to maintain frame alignment
+                # Skip this frame - add empty data with annotation status -100
                 frame_data = {
                     'boxes': np.array([]),
                     'keypoints': np.array([]),
-                    'conf': np.array([])
+                    'conf': np.array([]),
+                    'annotation_status': -100  # Skipped frame
                 }
                 all_frames_data.append(frame_data)
             
@@ -181,6 +206,7 @@ if __name__ == "__main__":
         confidence_threshold = float(sys.argv[4]) if len(sys.argv) > 4 else 0.05
         video_path = sys.argv[5] if len(sys.argv) > 5 else "raw_videos/Monica Greene unedited tennis match play.mp4"
         model_size = sys.argv[6] if len(sys.argv) > 6 else "s"
+        annotations_csv = sys.argv[7] if len(sys.argv) > 7 else None
     else:
         start_time = 0
         duration = 10  # Default to 10 seconds for testing
@@ -188,6 +214,7 @@ if __name__ == "__main__":
         confidence_threshold = 0.05
         video_path = "raw_videos/Monica Greene unedited tennis match play.mp4"
         model_size = "s"
+        annotations_csv = None
     
     # Start timing
     script_start_time = time.time()
@@ -200,6 +227,8 @@ if __name__ == "__main__":
     
     print(f"Processing video: {video_path}")
     print(f"Start time: {start_time}s, Duration: {duration}s, Target FPS: {target_fps}, Model: {model_path}")
+    if annotations_csv:
+        print(f"Annotations CSV: {annotations_csv}")
     
     # Extract pose data
     output_path = pose_extractor.extract_pose_data(
@@ -207,7 +236,8 @@ if __name__ == "__main__":
         start_time_seconds=start_time,
         duration_seconds=duration,
         target_fps=target_fps,
-        confidence_threshold=confidence_threshold
+        confidence_threshold=confidence_threshold,
+        annotations_csv=annotations_csv
 
     )
     

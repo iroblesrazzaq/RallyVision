@@ -38,9 +38,18 @@ def process_pose_data_to_features(npz_file_path, output_dir=None):
     
     # Process each frame to create feature vectors
     feature_vectors = []
+    annotation_status = []  # Track annotation status for each frame
     previous_players = None
     
     for frame_idx, frame_data in enumerate(pose_data):
+        # Check annotation status
+        status = frame_data.get('annotation_status', 0)  # Default to 0 if not present
+        annotation_status.append(status)
+        
+        # Skip frames that were not annotated (-100)
+        if status < 0:
+            continue
+            
         # Assign players using the core heuristic
         assigned_players = processor.assign_players(frame_data)
         
@@ -54,9 +63,14 @@ def process_pose_data_to_features(npz_file_path, output_dir=None):
         if (frame_idx + 1) % 100 == 0:
             print(f"  Processed {frame_idx + 1}/{len(pose_data)} frames")
     
-    # Convert to numpy array
+    # Convert to numpy arrays
     feature_array = np.array(feature_vectors)
+    status_array = np.array(annotation_status)
+    
     print(f"Feature array shape: {feature_array.shape}")
+    print(f"Annotation status array shape: {status_array.shape}")
+    print(f"Frames with status >= 0: {np.sum(status_array >= 0)}")
+    print(f"Frames with status == -100 (skipped): {np.sum(status_array == -100)}")
     
     # Determine output path
     if output_dir is None:
@@ -68,10 +82,13 @@ def process_pose_data_to_features(npz_file_path, output_dir=None):
     # Save feature vectors
     base_name = os.path.splitext(os.path.basename(npz_file_path))[0]
     feature_file_path = os.path.join(output_dir, f"{base_name}_features.npy")
+    status_file_path = os.path.join(output_dir, f"{base_name}_status.npy")
     
     try:
         np.save(feature_file_path, feature_array)
+        np.save(status_file_path, status_array)
         print(f"Saved features to {feature_file_path}")
+        print(f"Saved annotation status to {status_file_path}")
         return feature_file_path
     except Exception as e:
         print(f"Error saving features to {feature_file_path}: {e}")

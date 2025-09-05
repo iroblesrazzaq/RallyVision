@@ -19,29 +19,26 @@ class TennisDataset(Dataset):
     Loads feature vectors and creates ground truth labels from annotations.
     """
     
-    def __init__(self, data_dir, annotations_dir, sequence_length=150, 
+    def __init__(self, data_dir, sequence_length=150, 
                  feature_vector_size=288, normalize=True, transform=None):
         """
         Initialize the TennisDataset.
         
         Args:
-            data_dir (str): Directory containing feature vector .npy files
-            annotations_dir (str): Directory containing annotation CSV files
+            data_dir (str): Directory containing feature vector .npy files and status files
             sequence_length (int): Length of sequences for LSTM (default 150 frames)
             feature_vector_size (int): Size of each feature vector (default 288)
             normalize (bool): Whether to normalize features
             transform (callable): Optional transform to be applied on samples
         """
         self.data_dir = data_dir
-        self.annotations_dir = annotations_dir
         self.sequence_length = sequence_length
         self.feature_vector_size = feature_vector_size
         self.normalize = normalize
         self.transform = transform
         
-        # Find all feature files and their corresponding annotation files
-        self.feature_files = sorted(glob.glob(os.path.join(data_dir, "*.npy")))
-        self.annotation_files = self._find_annotation_files()
+        # Find all feature files
+        self.feature_files = sorted(glob.glob(os.path.join(data_dir, "*_features.npy")))
         
         # Load and process all data
         self.sequences, self.labels = self._load_all_data()
@@ -57,26 +54,6 @@ class TennisDataset(Dataset):
         
         print(f"Loaded {len(self.sequences)} sequences with {len(self.labels)} labels")
     
-    def _find_annotation_files(self):
-        """Find corresponding annotation files for feature files."""
-        annotation_files = {}
-        for feature_file in self.feature_files:
-            # Extract video name from feature file
-            base_name = os.path.basename(feature_file)
-            video_name = base_name.replace("_features.npy", "")
-            
-            # Look for corresponding annotation file
-            annotation_pattern = os.path.join(self.annotations_dir, f"{video_name}*.csv")
-            matching_annotations = glob.glob(annotation_pattern)
-            
-            if matching_annotations:
-                annotation_files[feature_file] = matching_annotations[0]
-            else:
-                print(f"Warning: No annotation file found for {feature_file}")
-                annotation_files[feature_file] = None
-                
-        return annotation_files
-    
     def _load_all_data(self):
         """Load all feature vectors and create sequences with labels."""
         all_sequences = []
@@ -88,18 +65,19 @@ class TennisDataset(Dataset):
                 features = np.load(feature_file)
                 print(f"Loaded features from {feature_file}: shape {features.shape}")
                 
-                # Load corresponding annotations
-                annotation_file = self.annotation_files[feature_file]
-                if annotation_file and os.path.exists(annotation_file):
-                    annotations = pd.read_csv(annotation_file)
-                    print(f"Loaded annotations from {annotation_file}: shape {annotations.shape}")
+                # Load corresponding annotation status
+                base_name = os.path.basename(feature_file)
+                status_file = os.path.join(self.data_dir, base_name.replace("_features.npy", "_status.npy"))
+                if os.path.exists(status_file):
+                    annotation_status = np.load(status_file)
+                    print(f"Loaded annotation status from {status_file}: shape {annotation_status.shape}")
                 else:
-                    # Create empty annotations if no file found
-                    annotations = pd.DataFrame(columns=['start_frame', 'end_frame', 'label'])
-                    print(f"No annotations found for {feature_file}, using empty annotations")
+                    # Create default annotation status if no file found
+                    annotation_status = np.zeros(len(features))  # Default to 0 (not in play)
+                    print(f"No annotation status file found for {feature_file}, using default status")
                 
                 # Create sequences and labels
-                sequences, labels = self._create_sequences_and_labels(features, annotations)
+                sequences, labels = self._create_sequences_and_labels(features, annotation_status)
                 all_sequences.extend(sequences)
                 all_labels.extend(labels)
                 
@@ -116,13 +94,13 @@ class TennisDataset(Dataset):
             # Return empty arrays with correct shapes
             return np.empty((0, self.sequence_length, self.feature_vector_size)), np.empty((0,))
     
-    def _create_sequences_and_labels(self, features, annotations):
+    def _create_sequences_and_labels(self, features, annotation_status):
         """
-        Create sequences and corresponding labels from features and annotations.
+        Create sequences and corresponding labels from features and annotation status.
         
         Args:
             features (np.array): Feature vectors of shape (num_frames, feature_vector_size)
-            annotations (pd.DataFrame): Annotation data with start_frame, end_frame, label columns
+            annotation_status (np.array): Annotation status for each frame
             
         Returns:
             tuple: (sequences, labels) lists
@@ -147,35 +125,16 @@ class TennisDataset(Dataset):
             
             # Determine label for this sequence (middle frame)
             middle_frame = i + self.sequence_length // 2
-            label = self._get_label_for_frame(middle_frame, annotations)
+            if middle_frame < len(annotation_status):
+                # Use the annotation status as the label (0 for not in play, 1 for in play)
+                # Convert any negative values to 0
+                label = max(0, annotation_status[middle_frame])
+            else:
+                label = 0  # Default to not in play
+                
             labels.append(label)
         
         return sequences, labels
-    
-    def _get_label_for_frame(self, frame_idx, annotations):
-        """
-        Get label for a specific frame from annotations.
-        
-        Args:
-            frame_idx (int): Frame index
-            annotations (pd.DataFrame): Annotation data
-            
-        Returns:
-            int: Label (1 for point/play, 0 for no point)
-        """
-        # Default label is 0 (no point)
-        label = 0
-        
-        # Check if frame is within any annotated point segment
-        for _, row in annotations.iterrows():
-            start_frame = int(row['start_frame']) if 'start_frame' in row else 0
-            end_frame = int(row['end_frame']) if 'end_frame' in row else 0
-            
-            if start_frame <= frame_idx <= end_frame:
-                label = 1
-                break
-                
-        return label
     
     def __len__(self):
         """Return the number of sequences."""
@@ -196,7 +155,7 @@ class TennisDataset(Dataset):
         return sequence_tensor, label_tensor
 
 
-def create_data_loaders(data_dir, annotations_dir, batch_size=32, 
+def create_data_loaders(data_dir, batch_size=32, 
                        sequence_length=150, feature_vector_size=288,
                        train_split=0.8, val_split=0.1, test_split=0.1,
                        num_workers=0, shuffle=True):
@@ -204,8 +163,7 @@ def create_data_loaders(data_dir, annotations_dir, batch_size=32,
     Create train, validation, and test data loaders.
     
     Args:
-        data_dir (str): Directory containing feature vector .npy files
-        annotations_dir (str): Directory containing annotation CSV files
+        data_dir (str): Directory containing feature vector .npy files and status files
         batch_size (int): Batch size for data loaders
         sequence_length (int): Length of sequences for LSTM
         feature_vector_size (int): Size of each feature vector
@@ -221,7 +179,6 @@ def create_data_loaders(data_dir, annotations_dir, batch_size=32,
     # Create dataset
     dataset = TennisDataset(
         data_dir=data_dir,
-        annotations_dir=annotations_dir,
         sequence_length=sequence_length,
         feature_vector_size=feature_vector_size
     )
@@ -275,8 +232,7 @@ if __name__ == "__main__":
     
     # Initialize dataset
     dataset = TennisDataset(
-        data_dir="/path/to/feature/vectors",
-        annotations_dir="/path/to/annotations"
+        data_dir="/path/to/feature/vectors"
     )
     
     # Get a sample
@@ -287,6 +243,5 @@ if __name__ == "__main__":
     
     # Create data loaders
     # train_loader, val_loader, test_loader = create_data_loaders(
-    #     data_dir="/path/to/feature/vectors",
-    #     annotations_dir="/path/to/annotations"
+    #     data_dir="/path/to/feature/vectors"
     # )
