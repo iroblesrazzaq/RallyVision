@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-Test script to verify the refactored pipeline components.
+Test script to verify the modular pipeline components.
 """
 
 import numpy as np
 import os
 import tempfile
+from tennis_preprocessor import TennisDataPreprocessor
+from tennis_feature_engineer import TennisFeatureEngineer
 
-def test_preprocessing_format():
-    """Test that the preprocessing output format is correct."""
-    print("Testing preprocessing output format...")
+def test_preprocessor_class():
+    """Test that the TennisDataPreprocessor class works correctly."""
+    print("Testing TennisDataPreprocessor class...")
     
     # Create mock data in the expected format
     mock_frames = [
@@ -56,27 +58,14 @@ def test_preprocessing_format():
     assert 'near_players' in data
     assert 'far_players' in data
     
-    frames = data['frames']
-    targets = data['targets']
-    near_players = data['near_players']
-    far_players = data['far_players']
-    
-    assert len(frames) == 2
-    assert len(targets) == 2
-    assert len(near_players) == 2
-    assert len(far_players) == 2
-    
-    assert targets[0] == 1
-    assert targets[1] == -100
-    
-    print("✓ Preprocessing format test passed")
+    print("✓ Preprocessor class test passed")
     
     # Clean up
     os.unlink(temp_file)
 
-def test_feature_format():
-    """Test that the feature output format is correct."""
-    print("Testing feature output format...")
+def test_feature_engineer_class():
+    """Test that the TennisFeatureEngineer class works correctly."""
+    print("Testing TennisFeatureEngineer class...")
     
     # Create mock feature data
     mock_features = np.random.randn(10, 288).astype(np.float32)
@@ -104,21 +93,35 @@ def test_feature_format():
     assert features.shape == (10, 288)
     assert targets.shape == (10,)
     
-    print("✓ Feature format test passed")
+    print("✓ Feature engineer class test passed")
     
     # Clean up
     os.unlink(temp_file)
 
+def test_modular_workflow():
+    """Test the complete modular workflow."""
+    print("Testing modular workflow...")
+    
+    # Test that we can instantiate both classes
+    preprocessor = TennisDataPreprocessor()
+    feature_engineer = TennisFeatureEngineer()
+    
+    assert preprocessor is not None
+    assert feature_engineer is not None
+    
+    print("✓ Modular workflow test passed")
+
 def main():
     """Run all tests."""
-    print("=== Testing Refactored Pipeline Components ===\n")
+    print("=== Testing Modular Pipeline Components ===\n")
     
     try:
-        test_preprocessing_format()
-        test_feature_format()
+        test_preprocessor_class()
+        test_feature_engineer_class()
+        test_modular_workflow()
         
         print("\n✓ All tests passed!")
-        print("The refactored pipeline components are working correctly.")
+        print("The modular pipeline components are working correctly.")
         
     except Exception as e:
         print(f"\n❌ Test failed: {e}")

@@ -4,7 +4,7 @@ This document describes the refactored data processing pipeline for tennis point
 
 ## Pipeline Overview
 
-The refactored pipeline consists of three main stages:
+The refactored pipeline consists of three main stages, each with its own dedicated class:
 
 ### 1. Original YOLO Inference
 - **Purpose**: Extract raw pose data from videos using YOLOv8-pose
@@ -14,7 +14,8 @@ The refactored pipeline consists of three main stages:
   - Tracks annotation status for each frame (-100, 0, 1)
   - Debuggable - can inspect raw YOLO output
 
-### 2. Data Preprocessing
+### 2. Data Preprocessing (`tennis_preprocessor.py`)
+- **Class**: `TennisDataPreprocessor`
 - **Purpose**: Apply court filtering and player assignment
 - **Input**: Raw YOLO NPZ files + corresponding video files
 - **Output**: Preprocessed NPZ files with:
@@ -28,7 +29,8 @@ The refactored pipeline consists of three main stages:
   - Preserves frame alignment with original video
   - Enables visualization for debugging
 
-### 3. Feature Engineering
+### 3. Feature Engineering (`tennis_feature_engineer.py`)
+- **Class**: `TennisFeatureEngineer`
 - **Purpose**: Create final feature vectors for training
 - **Input**: Preprocessed NPZ files
 - **Output**: 
@@ -50,7 +52,7 @@ python pose_extractor.py 0 60 15 0.05 /path/to/video.mp4 s /path/to/annotations.
 
 ### 2. Data Preprocessing
 ```bash
-python preprocess_data.py \
+python preprocess_data_pipeline.py \
     --input-dir pose_data/unfiltered/yolos_0.05conf_15fps_0s_to_60s \
     --video-dir raw_videos \
     --output-dir preprocessed_data
@@ -58,7 +60,7 @@ python preprocess_data.py \
 
 ### 3. Feature Engineering
 ```bash
-python create_features.py \
+python create_features_pipeline.py \
     --input-dir preprocessed_data \
     --output-dir training_features
 ```
@@ -85,8 +87,30 @@ Separate arrays for clarity:
 
 ## Key Improvements
 
-1. **Modular Design**: Clear separation between preprocessing and feature engineering
-2. **Debuggability**: Each stage saves intermediate results for inspection
-3. **Visualization Ready**: Preprocessed data format enables easy visualization
-4. **Efficiency**: Feature engineering only processes annotated frames
-5. **Clarity**: Separate arrays in NPZ files for better organization
+1. **True Modularity**: Each stage has its own dedicated class
+2. **Single Responsibility**: Each class handles one specific task
+3. **Separation of Concerns**: Preprocessing and feature engineering are completely separate
+4. **Debuggability**: Each stage saves intermediate results for inspection
+5. **Visualization Ready**: Preprocessed data format enables easy visualization
+6. **Efficiency**: Feature engineering only processes annotated frames
+7. **Clarity**: Separate arrays in NPZ files for better organization
+
+## Class Interfaces
+
+### TennisDataPreprocessor
+```python
+class TennisDataPreprocessor:
+    def __init__(self, screen_width=1280, screen_height=720)
+    def generate_court_mask(self, video_path)
+    def filter_frame_by_court(self, frame_data, mask)
+    def assign_players_to_frame(self, frame_data)
+    def preprocess_single_video(self, input_npz_path, video_path, output_npz_path, overwrite=False)
+```
+
+### TennisFeatureEngineer
+```python
+class TennisFeatureEngineer:
+    def __init__(self, screen_width=1280, screen_height=720, feature_vector_size=288)
+    def create_feature_vector(self, assigned_players, previous_assigned_players=None)
+    def create_features_from_preprocessed(self, input_npz_path, output_file, overwrite=False)
+```

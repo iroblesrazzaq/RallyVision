@@ -6,7 +6,7 @@ Test script to verify that the modified manual_court.py produces the same output
 import cv2
 import numpy as np
 import os
-from manual_court import CourtDetector
+from court_detector import CourtDetector
 
 def test_court_detection():
     """Test the court detection functionality"""

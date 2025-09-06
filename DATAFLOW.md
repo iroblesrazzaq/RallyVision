@@ -9,7 +9,7 @@
 - OUTPUT NPZ FILE HAS VIDEO FPS * LEN VIDEO SECONDS # ENTRIES
 - Tracks annotation status: -100 (not annotated), 0 (annotated, not in play), 1 (annotated, in play)
 
-### 2. preprocess_data.py
+### 2. tennis_preprocessor.py (TennisDataPreprocessor class)
 - Takes raw YOLO NPZ files and applies court mask filtering
 - Combines court filtering with data_processor methods for merging BBs and assigning players
 - Saves to NPZ file with separate arrays:
@@ -18,7 +18,7 @@
   - Near/far player assignments
 - Enables visualization to verify data correctness
 
-### 3. create_features.py
+### 3. tennis_feature_engineer.py (TennisFeatureEngineer class)
 - Takes preprocessed NPZ files and creates feature vectors
 - Only processes annotated frames (status >= 0)
 - Creates individual feature vectors using data_processor methods
@@ -29,6 +29,6 @@
 
 ## Data Flow Summary
 
-1. **Raw Inference** → 2. **Preprocessing** → 3. **Feature Engineering** → 4. **Training Ready**
+1. **Raw Inference** → 2. **Preprocessing (TennisDataPreprocessor)** → 3. **Feature Engineering (TennisFeatureEngineer)** → 4. **Training Ready**
 
-Each stage preserves frame alignment and provides clear intermediate outputs for debugging.
+Each stage is handled by a dedicated class with single responsibility, providing true modularity.
