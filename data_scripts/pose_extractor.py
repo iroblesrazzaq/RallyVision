@@ -5,6 +5,7 @@ import time
 import os
 import numpy as np
 from ultralytics import YOLO
+from tqdm import tqdm
 
 
 class PoseExtractor:
@@ -19,7 +20,7 @@ class PoseExtractor:
         
         Args:
             model_path (str): Path to the YOLOv8-pose model file.
-                             Defaults to 'yolov8s-pose.pt'
+                         Defaults to 'yolov8s-pose.pt'
         """
         # Try to use MPS if available, fallback to CPU
         if torch.backends.mps.is_available():
@@ -88,7 +89,6 @@ class PoseExtractor:
                 print(f"Warning: Could not load annotations from {annotations_csv}: {e}")
         
         print("Extracting pose data...")
-        processed_frames = 0
         
         # Calculate which frames to process for target FPS
         target_frames = []
@@ -104,11 +104,16 @@ class PoseExtractor:
         
         print(f"Will process {len(target_frames)} frames out of {total_frames_to_process} total frames")
         
+        # Initialize progress bar
+        processed_frames = 0
+        pbar = tqdm(total=total_frames_to_process, desc="Processing frames", unit="frame")
+        
         for i in range(total_frames_to_process):
             ret, frame = cap.read()
             
             if not ret:
                 print(f"Error reading frame {i + start_frame}")
+                pbar.close()
                 break
             
             # Check if we should process this frame
@@ -163,13 +168,10 @@ class PoseExtractor:
                 all_frames_data.append(frame_data)
             
             # Update progress bar
-            progress = (i + 1) / total_frames_to_process * 100
-            print(f"\rProgress: [{('=' * int(progress/2)).ljust(50)}] {progress:.1f}% (processed {processed_frames} frames)", end='', flush=True)
+            pbar.set_postfix({"Processed": processed_frames})
+            pbar.update(1)
         
-        print()  # New line after progress bar
-        
-        # Cleanup
-        cap.release()
+        pbar.close()
         
         print(f"✓ Successfully extracted pose data from {len(all_frames_data)} frames")
         
@@ -238,7 +240,6 @@ if __name__ == "__main__":
         target_fps=target_fps,
         confidence_threshold=confidence_threshold,
         annotations_csv=annotations_csv
-
     )
     
     if output_path is None:
