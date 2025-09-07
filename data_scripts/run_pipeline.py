@@ -17,8 +17,9 @@ import json
 import argparse
 import subprocess
 import glob
+import re
+import time
 from pathlib import Path
-from tqdm import tqdm
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -167,24 +168,17 @@ def run_pose_extractor(video_name, output_dir, config, overwrite=False):
     
     # Run the command
     print(f"  Running pose extraction for: {video_name}")
-    print(f"  Command: {' '.join(cmd)}")
+    print(f"  (Progress will be shown below)")
     
     try:
-        # Run the subprocess and stream output so progress bar is visible
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        # Run the subprocess and let it inherit stdout/stderr so progress bar works
+        result = subprocess.run(cmd)
         
-        # Read and print output line by line
-        for line in process.stdout:
-            print(f"    {line.rstrip()}")
-        
-        # Wait for the process to complete
-        process.wait()
-        
-        if process.returncode == 0:
+        if result.returncode == 0:
             print(f"  ✅ Pose extraction completed for: {video_name}")
             return True
         else:
-            print(f"  ❌ Pose extraction failed for: {video_name} (exit code: {process.returncode})")
+            print(f"  ❌ Pose extraction failed for: {video_name} (exit code: {result.returncode})")
             return False
     except Exception as e:
         print(f"  ❌ Pose extraction exception for: {video_name}: {e}")

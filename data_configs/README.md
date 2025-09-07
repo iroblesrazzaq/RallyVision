@@ -74,3 +74,10 @@ When `save_court_masks` is set to `true` in the config:
 - Failed court detection does not stop processing (falls back to processing without filtering)
 - Court masks are saved as a `court_mask` field in the NPZ file
 - When `save_court_masks` is `false` or omitted, no court masks are saved
+
+## Progress Tracking
+
+The pipeline now includes visual progress bars:
+- Pose extraction shows progress with a tqdm-based progress bar
+- Real-time progress updates are displayed during processing
+- Progress information is preserved when running as subprocess
