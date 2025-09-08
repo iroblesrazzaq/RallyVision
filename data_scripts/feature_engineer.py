@@ -15,6 +15,32 @@ class FeatureEngineer:
     
     This class takes preprocessed data with player assignments and creates
     feature vectors for training the tennis point detection model.
+    
+    Features include:
+    - Player bounding boxes and centroids
+    - Player velocities (calculated from consecutive frame positions)
+    - Player accelerations (calculated from consecutive frame velocities)
+    - Player speed and acceleration magnitudes
+    - Keypoint positions, velocities, accelerations, speeds, and confidences
+    - Limb lengths for anatomical structure analysis
+    
+    Proper acceleration calculation requires velocity data from three consecutive frames.
+    
+    Feature vector structure per player (180 features total):
+    - 1: Presence flag
+    - 4: Bounding box coordinates
+    - 2: Centroid coordinates
+    - 2: Velocity components (vx, vy)
+    - 2: Acceleration components (ax, ay)
+    - 1: Speed (magnitude of velocity)
+    - 1: Acceleration magnitude
+    - 34: Keypoint positions (17 keypoints × 2 coordinates)
+    - 17: Keypoint confidences
+    - 34: Keypoint velocities (17 keypoints × 2 components)
+    - 34: Keypoint accelerations (17 keypoints × 2 components)
+    - 17: Keypoint speeds (magnitude of keypoint velocities)
+    - 17: Keypoint acceleration magnitudes
+    - 14: Limb lengths
     """
     
     def __init__(self, screen_width=1280, screen_height=720, feature_vector_size=288):
@@ -163,7 +189,7 @@ class FeatureEngineer:
                 
         return np.array(limb_lengths)
 
-    def create_feature_vector(self, assigned_players, previous_assigned_players=None, num_keypoints=17):
+    def create_feature_vector(self, assigned_players, previous_assigned_players=None, previous_velocities=None, num_keypoints=17):
         """
         Creates a fixed-size 1D NumPy vector from the assigned player data.
         This is the designated place for feature engineering.
@@ -174,20 +200,27 @@ class FeatureEngineer:
         Velocity and acceleration are calculated only when we have consecutive detections.
         For missing frames, velocity/acceleration are set to 0 (no measurable movement).
         
-        Includes velocity and acceleration for each keypoint, and limb lengths in addition to overall player features.
+        Proper acceleration is calculated using velocity data from three consecutive frames:
+        - Frame n-2: Previous velocity (passed in previous_velocities)
+        - Frame n-1: Current velocity (calculated from positions)
+        - Frame n: Current frame (acceleration = current_velocity - previous_velocity)
+        
+        Includes velocity and acceleration for each keypoint, magnitude features for improved model performance,
+        and limb lengths for anatomical structure analysis.
         
         Args:
             assigned_players (dict): The output from the `assign_players` method for current frame.
             previous_assigned_players (dict): The output from the `assign_players` method for previous frame.
+            previous_velocities (dict): Dictionary with 'near_player' and 'far_player' velocity tuples from previous frame.
             num_keypoints (int): The number of keypoints per player.
 
         Returns:
             np.ndarray: A flat vector ready for the LSTM.
         """
         # Define the structure: 
-        # 1 (exists) + 4 (bbox) + 2 (centroid) + 2 (player velocity) + 2 (player acceleration) + 
-        # 17*2 (kp_xy) + 17 (kp_conf) + 17*2 (kp_velocity) + 17*2 (kp_acceleration) + 14 (limb_lengths) = 144 features per player
-        features_per_player = 1 + 4 + 2 + 2 + 2 + (num_keypoints * 3) + (num_keypoints * 2) + (num_keypoints * 2) + 14
+        # 1 (exists) + 4 (bbox) + 2 (centroid) + 2 (player velocity) + 2 (player acceleration) + 1 (player speed) + 1 (player acceleration magnitude) +
+        # 17*2 (kp_xy) + 17 (kp_conf) + 17*2 (kp_velocity) + 17*2 (kp_acceleration) + 17 (kp_speed) + 17 (kp_acceleration_magnitude) + 14 (limb_lengths) = 180 features per player
+        features_per_player = 1 + 4 + 2 + 2 + 2 + 1 + 1 + (num_keypoints * 3) + (num_keypoints * 2) + (num_keypoints * 2) + num_keypoints + num_keypoints + 14
         vector = np.full(features_per_player * 2, -1.0)  # Use -1 for missing values
 
         # --- Near Player ---
@@ -201,8 +234,12 @@ class FeatureEngineer:
             # Initialize velocity and acceleration
             velocity = (0.0, 0.0)
             acceleration = (0.0, 0.0)
+            speed = -1.0  # -1 for missing data
+            acceleration_magnitude = -1.0  # -1 for missing data
             kp_velocities = np.zeros((num_keypoints, 2))
             kp_accelerations = np.zeros((num_keypoints, 2))
+            kp_speeds = np.full(num_keypoints, -1.0)  # -1 for missing data
+            kp_acceleration_magnitudes = np.full(num_keypoints, -1.0)  # -1 for missing data
             limb_lengths = np.full(14, -1.0)  # Default to -1 for missing data
             
             # Calculate velocity, acceleration, and keypoint features if we have previous frame data
@@ -211,28 +248,45 @@ class FeatureEngineer:
                 # We have consecutive detections, calculate actual velocity
                 prev_centroid = self._calculate_centroid(previous_assigned_players['near_player']['box'])
                 velocity = self._calculate_velocity(centroid, prev_centroid)
+                speed = np.sqrt(velocity[0]**2 + velocity[1]**2)
+                
+                # Calculate acceleration if we have previous velocity data
+                if previous_velocities and previous_velocities['near_player']:
+                    acceleration = self._calculate_acceleration(velocity, previous_velocities['near_player'])
+                    acceleration_magnitude = np.sqrt(acceleration[0]**2 + acceleration[1]**2)
                 
                 # Calculate keypoint velocities
                 current_kps = player_data['keypoints']
                 prev_kps = previous_assigned_players['near_player']['keypoints']
                 kp_velocities = self._calculate_keypoint_velocity(current_kps, prev_kps)
                 
+                # Calculate keypoint speeds (magnitudes)
+                kp_speeds = np.sqrt(kp_velocities[:, 0]**2 + kp_velocities[:, 1]**2)
+                
+                # Calculate keypoint accelerations if we had previous keypoint velocities
+                # (This would require tracking keypoint velocities across frames, which is more complex)
+                # For now, we'll leave keypoint accelerations as zeros
+                
+                # Calculate keypoint acceleration magnitudes (will be zeros)
+                kp_acceleration_magnitudes = np.sqrt(kp_accelerations[:, 0]**2 + kp_accelerations[:, 1]**2)
+                
                 # Calculate limb lengths
                 limb_lengths = self._calculate_limb_lengths(player_data['keypoints'])
                 
-                # For acceleration, we would need previous velocities (which would require 3 consecutive frames)
-                # For now, we'll set acceleration to 0 unless we have a more sophisticated approach
-                
-            # Basic Features + Centroid + Velocity + Acceleration + Keypoint data + Keypoint velocity + Keypoint acceleration + Limb lengths
+            # Basic Features + Centroid + Velocity + Acceleration + Speed + Acceleration Magnitude + 
+            # Keypoint data + Keypoint velocity + Keypoint acceleration + Keypoint speeds + Keypoint acceleration magnitudes + Limb lengths
             flat_features = np.concatenate([
                 player_data['box'],
                 centroid,
                 velocity,
                 acceleration,
+                [speed, acceleration_magnitude],
                 player_data['keypoints'].flatten(),
                 player_data['conf'],
                 kp_velocities.flatten(),
                 kp_accelerations.flatten(),
+                kp_speeds,
+                kp_acceleration_magnitudes,
                 limb_lengths
             ])
             vector[1:features_per_player] = flat_features
@@ -243,9 +297,14 @@ class FeatureEngineer:
             offset = 1 + 4 + 2  # Skip presence, bbox, centroid
             # Set player velocity and acceleration to 0
             vector[offset:offset+4] = [0.0, 0.0, 0.0, 0.0]  # Velocity (0,0) + Acceleration (0,0)
+            # Set player speed and acceleration magnitude to -1 (missing data)
+            vector[offset+4:offset+6] = [-1.0, -1.0]  # Speed, Acceleration magnitude
             # Set keypoint velocity and acceleration to 0 (after skipping keypoint positions and confidences)
-            kp_offset = offset + 4 + (num_keypoints * 3)  # Skip player features + keypoint positions/confidences
+            kp_offset = offset + 6 + (num_keypoints * 3)  # Skip player features + keypoint positions/confidences
             vector[kp_offset:kp_offset+(num_keypoints * 4)] = 0.0  # Keypoint velocity + acceleration = 0
+            # Set keypoint speeds and acceleration magnitudes to -1 (missing data)
+            mag_offset = kp_offset + (num_keypoints * 4)
+            vector[mag_offset:mag_offset+(num_keypoints * 2)] = -1.0  # Keypoint speeds + acceleration magnitudes
             # Limb lengths remain -1 (already set by initial fill)
             
         # --- Far Player ---
@@ -260,8 +319,12 @@ class FeatureEngineer:
             # Initialize velocity and acceleration
             velocity = (0.0, 0.0)
             acceleration = (0.0, 0.0)
+            speed = -1.0  # -1 for missing data
+            acceleration_magnitude = -1.0  # -1 for missing data
             kp_velocities = np.zeros((num_keypoints, 2))
             kp_accelerations = np.zeros((num_keypoints, 2))
+            kp_speeds = np.full(num_keypoints, -1.0)  # -1 for missing data
+            kp_acceleration_magnitudes = np.full(num_keypoints, -1.0)  # -1 for missing data
             limb_lengths = np.full(14, -1.0)  # Default to -1 for missing data
             
             # Calculate velocity, acceleration, and keypoint features if we have previous frame data
@@ -270,25 +333,45 @@ class FeatureEngineer:
                 # We have consecutive detections, calculate actual velocity
                 prev_centroid = self._calculate_centroid(previous_assigned_players['far_player']['box'])
                 velocity = self._calculate_velocity(centroid, prev_centroid)
+                speed = np.sqrt(velocity[0]**2 + velocity[1]**2)
+                
+                # Calculate acceleration if we have previous velocity data
+                if previous_velocities and previous_velocities['far_player']:
+                    acceleration = self._calculate_acceleration(velocity, previous_velocities['far_player'])
+                    acceleration_magnitude = np.sqrt(acceleration[0]**2 + acceleration[1]**2)
                 
                 # Calculate keypoint velocities
                 current_kps = player_data['keypoints']
                 prev_kps = previous_assigned_players['far_player']['keypoints']
                 kp_velocities = self._calculate_keypoint_velocity(current_kps, prev_kps)
                 
+                # Calculate keypoint speeds (magnitudes)
+                kp_speeds = np.sqrt(kp_velocities[:, 0]**2 + kp_velocities[:, 1]**2)
+                
+                # Calculate keypoint accelerations if we had previous keypoint velocities
+                # (This would require tracking keypoint velocities across frames, which is more complex)
+                # For now, we'll leave keypoint accelerations as zeros
+                
+                # Calculate keypoint acceleration magnitudes (will be zeros)
+                kp_acceleration_magnitudes = np.sqrt(kp_accelerations[:, 0]**2 + kp_accelerations[:, 1]**2)
+                
                 # Calculate limb lengths
                 limb_lengths = self._calculate_limb_lengths(player_data['keypoints'])
                 
-            # Basic Features + Centroid + Velocity + Acceleration + Keypoint data + Keypoint velocity + Keypoint acceleration + Limb lengths
+            # Basic Features + Centroid + Velocity + Acceleration + Speed + Acceleration Magnitude + 
+            # Keypoint data + Keypoint velocity + Keypoint acceleration + Keypoint speeds + Keypoint acceleration magnitudes + Limb lengths
             flat_features = np.concatenate([
                 player_data['box'],
                 centroid,
                 velocity,
                 acceleration,
+                [speed, acceleration_magnitude],
                 player_data['keypoints'].flatten(),
                 player_data['conf'],
                 kp_velocities.flatten(),
                 kp_accelerations.flatten(),
+                kp_speeds,
+                kp_acceleration_magnitudes,
                 limb_lengths
             ])
             vector[offset+1 : offset+features_per_player] = flat_features
@@ -299,9 +382,14 @@ class FeatureEngineer:
             pos_offset = offset + 1 + 4 + 2  # Skip presence, bbox, centroid
             # Set player velocity and acceleration to 0
             vector[pos_offset:pos_offset+4] = [0.0, 0.0, 0.0, 0.0]  # Velocity (0,0) + Acceleration (0,0)
+            # Set player speed and acceleration magnitude to -1 (missing data)
+            vector[pos_offset+4:pos_offset+6] = [-1.0, -1.0]  # Speed, Acceleration magnitude
             # Set keypoint velocity and acceleration to 0 (after skipping keypoint positions and confidences)
-            kp_offset = pos_offset + 4 + (num_keypoints * 3)  # Skip player features + keypoint positions/confidences
+            kp_offset = pos_offset + 6 + (num_keypoints * 3)  # Skip player features + keypoint positions/confidences
             vector[kp_offset:kp_offset+(num_keypoints * 4)] = 0.0  # Keypoint velocity + acceleration = 0
+            # Set keypoint speeds and acceleration magnitudes to -1 (missing data)
+            mag_offset = kp_offset + (num_keypoints * 4)
+            vector[mag_offset:mag_offset+(num_keypoints * 2)] = -1.0  # Keypoint speeds + acceleration magnitudes
             # Limb lengths remain -1 (already set by initial fill)
             
         return vector
@@ -347,6 +435,7 @@ class FeatureEngineer:
             feature_vectors = []
             feature_targets = []
             previous_players = None
+            previous_velocities = {'near_player': None, 'far_player': None}  # Track previous velocities for acceleration
             
             for idx in annotated_indices:
                 # Create assigned players dictionary for this frame
@@ -355,14 +444,32 @@ class FeatureEngineer:
                     'far_player': far_players[idx]
                 }
                 
-                # Create feature vector
-                feature_vector = self.create_feature_vector(assigned_players, previous_players)
+                # Create feature vector with velocity history for acceleration calculation
+                feature_vector = self.create_feature_vector(assigned_players, previous_players, previous_velocities)
                 
                 feature_vectors.append(feature_vector)
                 feature_targets.append(targets[idx])
                 
-                # Update previous players for velocity/acceleration calculations
+                # Update previous players and velocities for next iteration
+                # Calculate current velocities for use in next iteration's acceleration calculation
+                current_velocities = {'near_player': None, 'far_player': None}
+                
+                # Calculate current velocities for near player
+                if (assigned_players['near_player'] and previous_players and 
+                    previous_players['near_player']):
+                    current_centroid = self._calculate_centroid(assigned_players['near_player']['box'])
+                    prev_centroid = self._calculate_centroid(previous_players['near_player']['box'])
+                    current_velocities['near_player'] = self._calculate_velocity(current_centroid, prev_centroid)
+                
+                # Calculate current velocities for far player
+                if (assigned_players['far_player'] and previous_players and 
+                    previous_players['far_player']):
+                    current_centroid = self._calculate_centroid(assigned_players['far_player']['box'])
+                    prev_centroid = self._calculate_centroid(previous_players['far_player']['box'])
+                    current_velocities['far_player'] = self._calculate_velocity(current_centroid, prev_centroid)
+                
                 previous_players = assigned_players
+                previous_velocities = current_velocities
                 
                 # Progress indicator
                 if len(feature_vectors) % 100 == 0:

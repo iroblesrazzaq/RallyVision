@@ -256,6 +256,7 @@ def draw_npz_on_video(npz_path, start_time=0, duration=99999):
     # Process frames
     frame_count = 0
     current_frame = start_frame
+    last_annotated_status = 0  # Track the last annotated frame's status
     
     while current_frame < end_frame:
         ret, frame = cap.read()
@@ -270,12 +271,31 @@ def draw_npz_on_video(npz_path, start_time=0, duration=99999):
                 )
                 # Add point indicator for preprocessed data
                 if targets is not None and current_frame < len(targets):
-                    is_in_point = targets[current_frame] == 1
-                    point_text = "IN POINT" if is_in_point else "NOT IN POINT"
-                    point_color = COLORS['point_indicator'] if is_in_point else COLORS['not_point_indicator']
-                    # Position: top-left for both indicators (they're not flickering)
-                    position = (20, 40)
-                    cv2.putText(frame, point_text, position, cv2.FONT_HERSHEY_SIMPLEX, 1, point_color, 2)
+                    target_value = targets[current_frame]
+                    if target_value == -100:
+                        # This is a skipped frame due to temporal downsampling
+                        # Show the last annotated status instead of "SKIPPED FRAME"
+                        is_in_point = last_annotated_status == 1
+                        point_text = "IN POINT" if is_in_point else "NOT IN POINT"
+                        point_color = COLORS['point_indicator'] if is_in_point else COLORS['not_point_indicator']
+                        # Position: top-left for main indicator
+                        position = (20, 40)
+                        cv2.putText(frame, point_text, position, cv2.FONT_HERSHEY_SIMPLEX, 1, point_color, 2)
+                        # Additional indicator: "SKIPPED FRAME" at top-center (smaller)
+                        skipped_text = "SKIPPED FRAME"
+                        skipped_color = COLORS['skipped_indicator']
+                        skipped_position = (width // 2 - 100, 40)  # Top-center
+                        cv2.putText(frame, skipped_text, skipped_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, skipped_color, 1)
+                    else:
+                        # This is either in point (1) or not in point (0)
+                        is_in_point = target_value == 1
+                        point_text = "IN POINT" if is_in_point else "NOT IN POINT"
+                        point_color = COLORS['point_indicator'] if is_in_point else COLORS['not_point_indicator']
+                        # Position: top-left for main indicator
+                        position = (20, 40)
+                        cv2.putText(frame, point_text, position, cv2.FONT_HERSHEY_SIMPLEX, 1, point_color, 2)
+                        # Update last annotated status
+                        last_annotated_status = target_value
         else:
             if current_frame < len(frames_data):
                 frame_data = frames_data[current_frame]
@@ -284,17 +304,28 @@ def draw_npz_on_video(npz_path, start_time=0, duration=99999):
                 annotation_status = frame_data.get('annotation_status', 0)
                 if annotation_status == -100:
                     # This is a skipped frame due to temporal downsampling
-                    point_text = "SKIPPED FRAME"
-                    point_color = COLORS['skipped_indicator']
-                    position = (20, 40)  # Top-left
+                    # Show the last annotated status instead of "SKIPPED FRAME"
+                    is_in_point = last_annotated_status == 1
+                    point_text = "IN POINT" if is_in_point else "NOT IN POINT"
+                    point_color = COLORS['point_indicator'] if is_in_point else COLORS['not_point_indicator']
+                    # Position: top-left for main indicator
+                    position = (20, 40)
                     cv2.putText(frame, point_text, position, cv2.FONT_HERSHEY_SIMPLEX, 1, point_color, 2)
+                    # Additional indicator: "SKIPPED FRAME" at top-center (smaller)
+                    skipped_text = "SKIPPED FRAME"
+                    skipped_color = COLORS['skipped_indicator']
+                    skipped_position = (width // 2 - 100, 40)  # Top-center
+                    cv2.putText(frame, skipped_text, skipped_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, skipped_color, 1)
                 else:
                     # This is either in point (1) or not in point (0)
                     is_in_point = annotation_status == 1
                     point_text = "IN POINT" if is_in_point else "NOT IN POINT"
                     point_color = COLORS['point_indicator'] if is_in_point else COLORS['not_point_indicator']
-                    position = (20, 40)  # Top-left
+                    # Position: top-left for main indicator
+                    position = (20, 40)
                     cv2.putText(frame, point_text, position, cv2.FONT_HERSHEY_SIMPLEX, 1, point_color, 2)
+                    # Update last annotated status
+                    last_annotated_status = annotation_status
         
         # Write frame to output video
         out.write(frame)

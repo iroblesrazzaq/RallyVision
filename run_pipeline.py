@@ -117,8 +117,8 @@ def create_directory_structure(config):
     conf = config["conf"]
     model_size = config["model_size"]
     
-    # Create directory name based on parameters
-    dir_name = f"{model_size}_{conf}_{start_time}_{duration}_{fps}"
+    # Create directory name based on parameters - match pose_extractor naming convention
+    dir_name = f"yolo{model_size}_{conf}conf_{fps}fps_{start_time}s_to_{duration}s"
     
     # Define directory paths
     unfiltered_dir = os.path.join("pose_data", "raw", dir_name)
@@ -289,6 +289,71 @@ def run_feature_engineer(input_dir, output_dir, overwrite=False):
         traceback.print_exc()
         return False
 
+def run_feature_visualization(preprocessed_dir, video_names, output_dir, config, overwrite=False):
+    """Run feature visualization using the FeatureVisualizer class directly."""
+    try:
+        # Import the FeatureVisualizer class
+        from data_scripts.feature_visualizer import FeatureVisualizer
+        
+        # Initialize visualizer
+        visualizer = FeatureVisualizer()
+        
+        # Process each video
+        successful = 0
+        failed = 0
+        
+        for video_name in video_names:
+            try:
+                # Define paths
+                base_name = os.path.splitext(video_name)[0]
+                npz_file = os.path.join(preprocessed_dir, f"{base_name}_preprocessed.npz")
+                video_path = os.path.join("raw_videos", video_name)
+                output_file = os.path.join(output_dir, f"{base_name}_features_visualized.mp4")
+                
+                # Check if files exist
+                if not os.path.exists(npz_file):
+                    print(f"  ⚠️  No preprocessed file found for {video_name}")
+                    failed += 1
+                    continue
+                    
+                if not os.path.exists(video_path):
+                    print(f"  ⚠️  No video file found for {video_name}")
+                    failed += 1
+                    continue
+                
+                # Check if output file already exists and overwrite is False
+                if os.path.exists(output_file) and not overwrite:
+                    print(f"  ✓ Already exists, skipping: {os.path.basename(output_file)}")
+                    successful += 1
+                    continue
+                
+                print(f"  Visualizing features for: {video_name}")
+                if visualizer.visualize_features_on_video(
+                    npz_file, video_path, output_file,
+                    start_time=config.get("start_time", 0),
+                    duration=min(config.get("duration", 99999), 30),  # Limit to 30s for testing
+                    show_velocity=True,
+                    show_acceleration=True
+                ):
+                    successful += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                print(f"  Failed to visualize {video_name}: {e}")
+                failed += 1
+        
+        print(f"  Feature visualization summary:")
+        print(f"    Successful: {successful}")
+        print(f"    Failed: {failed}")
+        
+        return failed == 0
+        
+    except Exception as e:
+        print(f"  ❌ Feature visualization failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(
@@ -395,6 +460,16 @@ Examples:
             print("  ✅ Feature engineering completed successfully")
         else:
             print("  ❌ Feature engineering failed")
+    
+    # Run feature visualization if requested
+    if "feature_visualizer" in steps_to_run:
+        print("\n4. Running Feature Visualization...")
+        viz_dir = os.path.join("sanity_check_clips", "features")
+        os.makedirs(viz_dir, exist_ok=True)
+        if run_feature_visualization(preprocessed_dir, videos, viz_dir, config, overwrite):
+            print("  ✅ Feature visualization completed successfully")
+        else:
+            print("  ❌ Feature visualization failed")
     
     print("\n🎯 Pipeline execution completed!")
     return 0
