@@ -14,7 +14,7 @@ class TennisPointLSTM(nn.Module):
     Takes sequences of feature vectors and predicts probability of being in a point for each frame.
     """
     
-    def __init__(self, input_size=288, hidden_size=128, num_layers=2, 
+    def __init__(self, input_size=360, hidden_size=128, num_layers=2, 
                  dropout=0.2, bidirectional=True):
         """
         Initialize the TennisPointLSTM.

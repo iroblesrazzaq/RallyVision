@@ -2,7 +2,9 @@
 Dataset Creator for Tennis Point Detection LSTM Model
 
 This module creates train/validation/test splits from feature-engineered tennis data,
-generates overlapping sequences, and saves them in an efficient format for training.
+generates overlapping sequences, and saves them in an efficient format for training. 
+This is the data pipeline side dataset to save the data, then we have a different 
+pytorch inheriting dataset on the model side
 """
 
 import numpy as np
