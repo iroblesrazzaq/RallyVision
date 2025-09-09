@@ -237,6 +237,12 @@ class FeatureVisualizer:
             far_player_velocity = (0.0, 0.0)
             far_player_acceleration = (0.0, 0.0)
             
+            # Initialize previous velocity tracking for acceleration calculation
+            if hasattr(self, '_previous_near_velocity'):
+                delattr(self, '_previous_near_velocity')
+            if hasattr(self, '_previous_far_velocity'):
+                delattr(self, '_previous_far_velocity')
+            
             while current_frame < end_frame:
                 ret, frame = cap.read()
                 if not ret:
@@ -259,11 +265,25 @@ class FeatureVisualizer:
                         if previous_near_player is not None:
                             current_centroid = self._calculate_centroid(near_player['box'])
                             previous_centroid = self._calculate_centroid(previous_near_player['box'])
-                            near_player_velocity = (current_centroid[0] - previous_centroid[0],
-                                                   current_centroid[1] - previous_centroid[1])
+                            current_velocity = (current_centroid[0] - previous_centroid[0],
+                                               current_centroid[1] - previous_centroid[1])
                             
-                            # Simple acceleration (change in velocity)
-                            # For a more accurate calculation, we'd need previous velocity
+                            # Calculate acceleration as change in velocity
+                            if hasattr(self, '_previous_near_velocity'):
+                                near_player_acceleration = (current_velocity[0] - self._previous_near_velocity[0],
+                                                           current_velocity[1] - self._previous_near_velocity[1])
+                            else:
+                                near_player_acceleration = (0.0, 0.0)
+                            
+                            # Store current velocity for next iteration
+                            self._previous_near_velocity = current_velocity
+                            near_player_velocity = current_velocity
+                        else:
+                            # Reset velocity/acceleration tracking when no previous player
+                            if hasattr(self, '_previous_near_velocity'):
+                                delattr(self, '_previous_near_velocity')
+                            near_player_velocity = (0.0, 0.0)
+                            near_player_acceleration = (0.0, 0.0)
                         
                         frame = self._draw_player_with_features(
                             frame, near_player, COLORS['player1'], "Player 1 (Near)"
@@ -278,8 +298,25 @@ class FeatureVisualizer:
                         if previous_far_player is not None:
                             current_centroid = self._calculate_centroid(far_player['box'])
                             previous_centroid = self._calculate_centroid(previous_far_player['box'])
-                            far_player_velocity = (current_centroid[0] - previous_centroid[0],
-                                                  current_centroid[1] - previous_centroid[1])
+                            current_velocity = (current_centroid[0] - previous_centroid[0],
+                                               current_centroid[1] - previous_centroid[1])
+                            
+                            # Calculate acceleration as change in velocity
+                            if hasattr(self, '_previous_far_velocity'):
+                                far_player_acceleration = (current_velocity[0] - self._previous_far_velocity[0],
+                                                          current_velocity[1] - self._previous_far_velocity[1])
+                            else:
+                                far_player_acceleration = (0.0, 0.0)
+                            
+                            # Store current velocity for next iteration
+                            self._previous_far_velocity = current_velocity
+                            far_player_velocity = current_velocity
+                        else:
+                            # Reset velocity/acceleration tracking when no previous player
+                            if hasattr(self, '_previous_far_velocity'):
+                                delattr(self, '_previous_far_velocity')
+                            far_player_velocity = (0.0, 0.0)
+                            far_player_acceleration = (0.0, 0.0)
                         
                         frame = self._draw_player_with_features(
                             frame, far_player, COLORS['player2'], "Player 2 (Far)"
@@ -323,6 +360,12 @@ class FeatureVisualizer:
                     # Update previous players
                     previous_near_player = near_player
                     previous_far_player = far_player
+                    
+                    # Reset velocity tracking when players disappear
+                    if near_player is None and hasattr(self, '_previous_near_velocity'):
+                        delattr(self, '_previous_near_velocity')
+                    if far_player is None and hasattr(self, '_previous_far_velocity'):
+                        delattr(self, '_previous_far_velocity')
                     
                     # Add point indicator
                     if current_frame < len(targets):
