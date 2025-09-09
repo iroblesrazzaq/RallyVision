@@ -8,7 +8,7 @@ import torch.nn as nn
 import os
 import argparse
 from tennis_dataset import TennisDataset, create_data_loaders
-from tennis_lstm_model import TennisPointLSTM, train_model
+from lstm_model_arch import TennisPointLSTM, train_model
 
 
 def main():
