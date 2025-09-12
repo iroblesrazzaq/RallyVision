@@ -42,6 +42,8 @@ add biomechanical features (limb lengths)
 Later:
 look into LSD instead of Hough for line detection, further court detection optimizations
 
+look into finetuning yolov8n pose on tennis specific dataset from yolov8 pose large to optimize for inference speed
+
 Look into data augmentation with visual language models for labelling data. gemma-3-27b-it, qwen 2.5 VL 32b?
 
 Done:
