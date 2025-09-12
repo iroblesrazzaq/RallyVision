@@ -354,6 +354,84 @@ def run_feature_visualization(preprocessed_dir, video_names, output_dir, config,
         traceback.print_exc()
         return False
 
+def run_enhanced_feature_visualization(preprocessed_dir, features_dir, video_names, output_dir, config, overwrite=False):
+    """Run enhanced feature visualization that overlays engineered features on original video.
+    Uses preprocessed data (for frames/masks/targets) and feature vectors.
+    """
+    try:
+        # Import the EnhancedFeatureVisualizer class
+        from data_scripts.enhanced_feature_visualizer import EnhancedFeatureVisualizer
+
+        # Initialize visualizer
+        visualizer = EnhancedFeatureVisualizer()
+
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Process each video
+        successful = 0
+        failed = 0
+
+        for video_name in video_names:
+            try:
+                base_name = os.path.splitext(video_name)[0]
+
+                preprocessed_npz = os.path.join(preprocessed_dir, f"{base_name}_preprocessed.npz")
+                features_npz = os.path.join(features_dir, f"{base_name}_features.npz")
+                video_path = os.path.join("raw_videos", video_name)
+                output_file = os.path.join(output_dir, f"{base_name}_enhanced_features_visualized.mp4")
+
+                # Validate inputs exist
+                if not os.path.exists(preprocessed_npz):
+                    print(f"  ⚠️  No preprocessed file found for {video_name}")
+                    failed += 1
+                    continue
+                if not os.path.exists(features_npz):
+                    print(f"  ⚠️  No features file found for {video_name}")
+                    failed += 1
+                    continue
+                if not os.path.exists(video_path):
+                    print(f"  ⚠️  No video file found for {video_name}")
+                    failed += 1
+                    continue
+
+                # Skip if already exists and not overwriting
+                if os.path.exists(output_file) and not overwrite:
+                    print(f"  ✓ Already exists, skipping: {os.path.basename(output_file)}")
+                    successful += 1
+                    continue
+
+                # Execute visualization (limit duration to 30s by default for speed)
+                print(f"  Enhanced visualizing features for: {video_name}")
+                duration = min(config.get("duration", 99999), 30)
+                ok = visualizer.validate_and_visualize_features(
+                    preprocessed_npz,
+                    features_npz,
+                    video_path,
+                    output_file,
+                    start_time=config.get("start_time", 0),
+                    duration=duration,
+                )
+                if ok:
+                    successful += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                print(f"  Failed to enhanced-visualize {video_name}: {e}")
+                failed += 1
+
+        print(f"  Enhanced feature visualization summary:")
+        print(f"    Successful: {successful}")
+        print(f"    Failed: {failed}")
+
+        return failed == 0
+
+    except Exception as e:
+        print(f"  ❌ Enhanced feature visualization failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(
@@ -470,6 +548,16 @@ Examples:
             print("  ✅ Feature visualization completed successfully")
         else:
             print("  ❌ Feature visualization failed")
+
+    # Run enhanced feature visualization if requested
+    if "enhanced_feature_visualizer" in steps_to_run:
+        print("\n4b. Running Enhanced Feature Visualization...")
+        enhanced_viz_dir = os.path.join("sanity_check_clips", "enhanced_features")
+        os.makedirs(enhanced_viz_dir, exist_ok=True)
+        if run_enhanced_feature_visualization(preprocessed_dir, features_dir, videos, enhanced_viz_dir, config, overwrite):
+            print("  ✅ Enhanced feature visualization completed successfully")
+        else:
+            print("  ❌ Enhanced feature visualization failed")
     
     print("\n🎯 Pipeline execution completed!")
     return 0

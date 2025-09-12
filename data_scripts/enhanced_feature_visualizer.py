@@ -403,7 +403,7 @@ def main():
         print("Testing enhanced feature visualization...")
         success = visualizer.validate_and_visualize_features(
             preprocessed_npz_path, features_npz_path, video_path, output_path,
-            start_time=0, duration=10  # Short test duration
+            start_time=0, duration=60  # Short test duration
         )
         print(f"Visualization {'succeeded' if success else 'failed'}")
     else:
