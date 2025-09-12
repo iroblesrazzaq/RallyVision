@@ -34,10 +34,8 @@ An optimized version of the pose extractor is available that leverages Apple MPS
 See [POSE_EXTRACTOR_OPTIMIZED.md](POSE_EXTRACTOR_OPTIMIZED.md) for details.
 
 Current:
-create MVP model
-integrate DataProcessor class into pipeline
-add centroid, velocity, and acceleration feature engineering for both player and keypoints
-add biomechanical features (limb lengths)
+- iterate on model to improve accuracy: hyperparameters, data aug, annotate more data?
+- refine postprocessing steps to get actual point start/ends, quantify performance for that
 
 Later:
 look into LSD instead of Hough for line detection, further court detection optimizations
