@@ -27,7 +27,7 @@ class TennisDatasetCreator:
     3. Efficient HDF5 storage for large datasets
     """
     
-    def __init__(self, feature_dir, output_dir, splits=(0.765, 0.085, 0.15)):
+    def __init__(self, feature_dir, output_dir, splits=(0.765, 0.085, 0.15), sequence_length=150, overlap=75):
         """
         Initialize dataset creator.
         
@@ -46,8 +46,8 @@ class TennisDatasetCreator:
         self.scaler_path = self.output_dir / "scaler.joblib"
         
         # Sequence parameters
-        self.sequence_length = 150  # 10 seconds at 15 FPS
-        self.overlap = 75  # 50% overlap
+        self.sequence_length = sequence_length  # 10 seconds at 15 FPS
+        self.overlap = overlap  # 50% overlap
         self.num_features = 360  # Updated from 288 to match actual feature vectors
         
     def _create_temporal_splits(self, features, targets):
@@ -474,7 +474,9 @@ def main():
     parser.add_argument("--train-ratio", type=float, default=0.765, help="Training split ratio (default: 0.765)")
     parser.add_argument("--val-ratio", type=float, default=0.085, help="Validation split ratio (default: 0.085)")
     parser.add_argument("--test-ratio", type=float, default=0.15, help="Test split ratio (default: 0.15)")
-    
+    parser.add_argument("--sequence-length", type=int, default=150, help="Sequence length (default: 150)")
+    parser.add_argument("--overlap", type=int, default=75, help="Overlap (default: 75)")
+
     args = parser.parse_args()
     
     # Validate split ratios sum to 1.0
@@ -486,7 +488,9 @@ def main():
     creator = TennisDatasetCreator(
         feature_dir=args.feature_dir,
         output_dir=args.output_dir,
-        splits=(args.train_ratio, args.val_ratio, args.test_ratio)
+        splits=(args.train_ratio, args.val_ratio, args.test_ratio),
+        sequence_length=args.sequence_length,
+        overlap=args.overlap
     )
     
     # Create dataset

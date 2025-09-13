@@ -23,7 +23,7 @@
 - Only processes annotated frames (status >= 0)
 - Creates individual feature vectors using data_processor methods
 - Output: 
-  - Feature array of shape (n_annotated_frames, 288)
+  - Feature array of shape (n_annotated_frames, 360)
   - Target array of shape (n_annotated_frames,)
   - Saved to organized directory structure
 

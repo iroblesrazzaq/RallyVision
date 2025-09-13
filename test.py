@@ -310,6 +310,3 @@ for seq_idx in range(424):
         ),
     )
 
-
-
-# %%
