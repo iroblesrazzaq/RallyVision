@@ -4,7 +4,7 @@
 import numpy as np
 import torch
 from lstm_model_arch import TennisPointLSTM
-from scipy.ndimage import gaussian_filter1d
+import scipy.ndimage
 
 """
 My test.py file is my current evaluation file. however, it just looks at sequences, not the whole video. 
@@ -130,12 +130,16 @@ output_arr = np.full((3, num_frames), np.nan)
 
 # now we construct the feature lists, perform inference, and fill output array, tracking start indexes
 for i in start_idxs:
-    feature_vec = feature_data['features'][i:i+sequence_length, :].shape
-    output_sequence = model(feature_vec).detach().cpu().numpy()
+    # slice features and convert to tensor of shape (1, sequence_length, input_size)
+    seq_np = feature_data['features'][i:i+sequence_length, :].astype(np.float32)
+    seq_tensor = torch.from_numpy(seq_np).unsqueeze(0).to(device)
+    with torch.no_grad():
+        output_tensor = model(seq_tensor)  # (1, seq_len, 1)
+    output_sequence = output_tensor.squeeze().detach().cpu().numpy()  # (seq_len,)
     # now we do the nan checks:
-    if output_arr[0, i:i+sequence_length].isnan().all(): # no overlap, can put in this row
+    if np.isnan(output_arr[0, i:i+sequence_length]).all(): # no overlap, can put in this row
         output_arr[0, i:i+sequence_length] = output_sequence
-    elif output_arr[1, i:i+sequence_length].isnan().all():
+    elif np.isnan(output_arr[1, i:i+sequence_length]).all():
         output_arr[1, i:i+sequence_length] = output_sequence
     elif i == start_idxs[-1] and num_frames % sequence_length > 0: # we allow 3x overlap for covering end sequence
         output_arr[2, i:i+sequence_length] = output_sequence
@@ -144,9 +148,8 @@ for i in start_idxs:
 
 # now we have filled res_arr. next, get 1, num_frames array by averaging over 0th axis, and apply gaussian smoothing
 avg_probs = np.nanmean(output_arr, axis=0)
-smoothed_probs = scipy.ndimage.gaussian_filter1d(avg_probs, sigma=GAUSSIAN_SIGMA)
-# %%
-smoothed_probs
+smoothed_probs = scipy.ndimage.gaussian_filter1d(avg_probs.astype(np.float32), sigma=GAUSSIAN_SIGMA)
+_ = smoothed_probs  # silence variable display in notebooks
 
 # perform hysteresis filtering on smoothed sequence
 
