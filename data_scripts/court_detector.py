@@ -19,7 +19,7 @@ class CourtDetector:
     A class for detecting tennis court boundaries and estimating playable areas from video frames.
     """
     
-    def __init__(self, yolo_model_path: str = 'yolov8n.pt'):
+    def __init__(self, yolo_model_path: str = 'yolov8s.pt'):
         """
         Initialize the CourtDetector.
         
