@@ -1,0 +1,203 @@
+4<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tennis Tracker - AI Video Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-tennis-ball"></i> Tennis Tracker</h1>
+                <p class="subtitle">Free and Open Source Tennis Match Segmentation</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- File Upload Section -->
+            <section class="upload-section">
+                <div class="upload-container">
+                    <div class="file-drop-zone" id="dropZone">
+                        <div class="drop-content">
+                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            <h3>Drop your tennis video here</h3>
+                            <p>or <button class="browse-btn" id="browseBtn">browse files</button></p>
+                            <p class="file-info">Supports MP4 files up to 2GB</p>
+                        </div>
+                        <input type="file" id="fileInput" accept="video/*" style="display: none;">
+                    </div>
+                    
+                    <div class="selected-file" id="selectedFile" style="display: none;">
+                        <div class="file-preview">
+                            <i class="fas fa-video file-icon"></i>
+                            <div class="file-details">
+                                <span class="file-name" id="fileName"></span>
+                                <span class="file-size" id="fileSize"></span>
+                            </div>
+                            <button class="remove-file-btn" id="removeFileBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Buttons Section -->
+            <section class="controls-section">
+                <div class="control-buttons">
+                    <button class="btn btn-primary" id="startBtn" disabled>
+                        <i class="fas fa-play"></i>
+                        Start Analysis
+                    </button>
+                    <button class="btn btn-secondary" id="cancelBtn" disabled>
+                        <i class="fas fa-stop"></i>
+                        Cancel
+                    </button>
+                </div>
+            </section>
+
+            <!-- Progress Section -->
+            <section class="progress-section" id="progressSection" style="display: none;">
+                <h3>Analysis Progress</h3>
+                <div class="progress-container">
+                    <!-- Pose Extraction -->
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="progress-label">
+                                <i class="fas fa-running"></i>
+                                Pose Extraction
+                            </span>
+                            <span class="progress-status" id="poseStatus">Waiting...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="poseFill"></div>
+                        </div>
+                        <div class="progress-percentage" id="posePercentage">0%</div>
+                    </div>
+
+                    <!-- Preprocessing -->
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="progress-label">
+                                <i class="fas fa-cogs"></i>
+                                Preprocessing
+                            </span>
+                            <span class="progress-status" id="preprocessStatus">Waiting...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="preprocessFill"></div>
+                        </div>
+                        <div class="progress-percentage" id="preprocessPercentage">0%</div>
+                    </div>
+
+                    <!-- Feature Engineering -->
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="progress-label">
+                                <i class="fas fa-brain"></i>
+                                Feature Engineering
+                            </span>
+                            <span class="progress-status" id="featureStatus">Waiting...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="featureFill"></div>
+                        </div>
+                        <div class="progress-percentage" id="featurePercentage">0%</div>
+                    </div>
+
+                    <!-- Inference -->
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="progress-label">
+                                <i class="fas fa-robot"></i>
+                                AI Inference
+                            </span>
+                            <span class="progress-status" id="inferenceStatus">Waiting...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="inferenceFill"></div>
+                        </div>
+                        <div class="progress-percentage" id="inferencePercentage">0%</div>
+                    </div>
+
+                    <!-- Output Video Drawing -->
+                    <div class="progress-item">
+                        <div class="progress-header">
+                            <span class="progress-label">
+                                <i class="fas fa-video"></i>
+                                Output Video Drawing
+                            </span>
+                            <span class="progress-status" id="outputStatus">Waiting...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="outputFill"></div>
+                        </div>
+                        <div class="progress-percentage" id="outputPercentage">0%</div>
+                    </div>
+                </div>
+
+                <!-- Overall Progress -->
+                <div class="overall-progress">
+                    <div class="overall-progress-header">
+                        <span class="overall-label">Overall Progress</span>
+                        <span class="overall-percentage" id="overallPercentage">0%</span>
+                    </div>
+                    <div class="overall-progress-bar">
+                        <div class="overall-progress-fill" id="overallFill"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h3>Analysis Complete!</h3>
+                <div class="results-container">
+                    <div class="result-item">
+                        <div class="result-info">
+                            <i class="fas fa-video result-icon"></i>
+                            <div class="result-details">
+                                <h4>Analyzed Video</h4>
+                                <p>Video with detected points and analysis</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-download" id="downloadVideoBtn">
+                            <i class="fas fa-download"></i>
+                            Download MP4
+                        </button>
+                    </div>
+
+                    <div class="result-item">
+                        <div class="result-info">
+                            <i class="fas fa-table result-icon"></i>
+                            <div class="result-details">
+                                <h4>Analysis Data</h4>
+                                <p>Detailed CSV with pose data and predictions</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-download" id="downloadCsvBtn">
+                            <i class="fas fa-download"></i>
+                            Download CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="new-analysis">
+                    <button class="btn btn-primary" id="newAnalysisBtn">
+                        <i class="fas fa-plus"></i>
+                        Start New Analysis
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 Tennis Tracker. AI-powered tennis analysis.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
