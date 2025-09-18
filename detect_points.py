@@ -23,14 +23,16 @@ from execute_segmentation import segment_video, load_intervals
 
 
 def main():
+
     parser = argparse.ArgumentParser(description="Tennis Point Inference & Segmentation Engine")
     parser.add_argument("--video", required=True, help="Path to the input video file.")
     parser.add_argument("--model", default="checkpoints/seq_len300/best_model.pth", help="Path to the trained LSTM model checkpoint (.pth).")
     parser.add_argument("--scaler", default="data/seq_len_300/scaler.joblib", help="Path to the trained StandardScaler (.joblib).")
     parser.add_argument("--yolo-model", default="yolov8s-pose.pt", help="YOLOv8 pose model filename in models/ (or full path).")
-    parser.add_argument("--output-dir", default="output", help="Directory to save the output CSV and segmented video.")
+    parser.add_argument("--output-dir", default="output_videos", help="Directory to save the output CSV and segmented video.")
     parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold for pose detection.")
-    parser.add_argument("--fps", type=int, default=15, help="Target FPS for processing.")
+
+    FPS = 15
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -46,7 +48,7 @@ def main():
             confidence_threshold=args.conf,
             start_time_seconds=0,
             duration_seconds=99999,
-            target_fps=args.fps,
+            target_fps=FPS,
             annotations_csv=None
         )
 
@@ -74,12 +76,12 @@ def main():
 
     print("\n--- Step 6: Post-Processing ---")
     smoothed_probs = scipy.ndimage.gaussian_filter1d(avg_probs, sigma=1.5)
-    binary_pred = hysteresis_threshold(smoothed_probs, low=0.45, high=0.80, min_duration=int(0.5 * args.fps))
+    binary_pred = hysteresis_threshold(smoothed_probs, low=0.45, high=0.80, min_duration=int(0.5 * FPS))
 
     print("\n--- Step 7: Generating Output CSV ---")
     output_csv_path = os.path.join(args.output_dir, f"{base_name}_segments.csv")
     segments = extract_segments_from_binary(binary_pred)
-    write_segments_csv(segments, output_csv_path, fps=float(args.fps), overwrite=True)
+    write_segments_csv(segments, output_csv_path, fps=float(FPS), overwrite=True)
 
     print("\n--- Step 8: Generating Segmented Video ---")
     output_video_path = os.path.join(args.output_dir, f"{base_name}_segmented.mp4")

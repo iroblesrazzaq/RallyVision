@@ -19,7 +19,7 @@ Run the main script with your video. The model and scaler default to the seq_len
 ```bash
 python detect_points.py \
   --video /path/to/your/match.mp4 \
-  --output-dir output
+  --output-dir output_videos
 ```
 
 Optional overrides:
@@ -29,13 +29,14 @@ Optional overrides:
 # --model defaults to checkpoints/seq_len300/best_model.pth
 # --scaler defaults to data/seq_len_300/scaler.joblib
 # --yolo-model defaults to yolov8s-pose.pt (resolved under models/)
+# --output-dir defaults to output_videos
 
 python detect_points.py \
   --video /path/to/your/match.mp4 \
   --model /custom/path/best_model.pth \
   --scaler /custom/path/scaler.joblib \
-  --yolo-model yolov8n-pose.pt \
-  --output-dir output
+  --yolo-model yolov8s-pose.pt \
+  --output-dir output_videos
 ```
 
 ## Outputs
