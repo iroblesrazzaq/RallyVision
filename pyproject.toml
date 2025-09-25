@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tennis-tracker"
+version = "0.1.0"
+description = "Tennis point detection pipeline: CLI and GUI"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy",
+  "torch",
+  "ultralytics",
+  "opencv-python",
+  "av",
+  "scipy",
+  "tqdm",
+  "joblib",
+  "Flask>=2.2",
+  "Flask-Cors>=3.0",
+]
+
+[project.optional-dependencies]
+train = [
+  "scikit-learn",
+  "matplotlib",
+  "pandas",
+]
+
+[project.scripts]
+tennis-tracker = "apps.cli.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+

@@ -1,3 +1,26 @@
+dist/
+build/
+*.spec
+
+# generated data and outputs
+raw_videos/
+pose_data/
+output_videos/
+output_csvs/
+jobs/
+logs/
+checkpoints/
+
+# large artifacts
+*.npz
+*.h5
+*.pth
+*.joblib
+
+# notebooks and env
+.ipynb_checkpoints/
+.venv/
+
 *.mp4
 .DS_Store
 .csv
