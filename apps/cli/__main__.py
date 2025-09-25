@@ -54,15 +54,20 @@ def run(args: argparse.Namespace) -> int:
     min_duration_frames = int(round(max(0.0, float(args.min_dur_sec)) * float(args.fps)))
     binary_pred = hysteresis_threshold(smoothed_probs, low=float(args.low), high=float(args.high), min_duration=min_duration_frames)
     segments = extract_segments_from_binary(binary_pred)
-    csv_out = os.path.join(args.output_dir, "segments.csv")
-    write_segments_csv(segments, csv_out, fps=float(args.fps), overwrite=bool(args.overwrite))
+    # Optionally write CSV annotations
+    if args.csv:
+        csv_out = os.path.join(args.output_dir, "segments.csv")
+        write_segments_csv(segments, csv_out, fps=float(args.fps), overwrite=bool(args.overwrite))
     # Step 5: Segment video (optional)
     if args.segment_video:
         video_out = os.path.join(args.output_dir, "segmented.mp4")
-        from tennis_tracker.segmentation.segment import load_intervals
-        intervals = load_intervals(csv_out)
-        if intervals:
-            segment_video(args.video, intervals, video_out)
+        # Convert frame index segments to second-based intervals
+        intervals_sec = [
+            (start_idx / float(args.fps), end_idx / float(args.fps))
+            for (start_idx, end_idx) in segments
+        ]
+        if intervals_sec:
+            segment_video(args.video, intervals_sec, video_out)
     print("Done.")
     return 0
 
@@ -87,6 +92,7 @@ def main() -> int:
     p.add_argument("--overwrite", action="store_true", help="Overwrite outputs if they exist")
     p.add_argument("--raw-npz", default=None, help="Optional: point to existing raw pose npz to skip extraction")
     p.add_argument("--segment-video", action="store_true", help="Also write segmented MP4")
+    p.add_argument("--csv", action="store_true", help="Also write segments CSV annotations to output dir")
     args = p.parse_args()
     return run(args)
 
