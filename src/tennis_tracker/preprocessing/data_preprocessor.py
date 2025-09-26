@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from data_scripts.court_detector import CourtDetector
+from tennis_tracker.preprocessing.court_detector import CourtDetector
 
 
 class DataPreprocessor:
