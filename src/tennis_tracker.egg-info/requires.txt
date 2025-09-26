@@ -1,0 +1,15 @@
+numpy
+torch
+ultralytics
+opencv-python
+av
+scipy
+tqdm
+joblib
+Flask>=2.2
+Flask-Cors>=3.0
+
+[train]
+scikit-learn
+matplotlib
+pandas
