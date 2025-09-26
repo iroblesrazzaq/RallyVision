@@ -29,7 +29,7 @@ train = [
 ]
 
 [project.scripts]
-tennis-tracker = "apps.cli.__main__:main"
+tennis-tracker = "tennis_tracker.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
