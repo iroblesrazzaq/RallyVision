@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 import os
+import logging
+from logging.handlers import RotatingFileHandler
 import uuid
 import threading
+import sys
+import webbrowser
+import socket
+import time
 from pathlib import Path
 from typing import Dict, Any
 
@@ -27,15 +33,26 @@ import av
 import scipy.ndimage
 
 
-BASE_DIR = Path(__file__).resolve().parent
-ROOT_DIR = BASE_DIR.parent.parent
-JOBS_DIR = ROOT_DIR / "jobs"
-MODELS_DIR = ROOT_DIR / "models"
-JOBS_DIR.mkdir(exist_ok=True)
+def _is_frozen() -> bool:
+    """ Checks if the application is a frozen executable. """
+    return getattr(sys, "frozen", False)
+
+def _bundle_dir() -> Path:
+    """ Returns the base directory of the app, whether frozen or not. """
+    return Path(sys._MEIPASS) if _is_frozen() else Path(__file__).resolve().parent.parent.parent
+
+# Jobs directory must be user-writable.
+JOBS_DIR = Path.home() / "DeepMatchJobs"
+JOBS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Define asset directories relative to the bundle
+MODELS_DIR = _bundle_dir() / "models"
+DATA_DIR = _bundle_dir() / "data"
+CHECKPOINTS_DIR = _bundle_dir() / "checkpoints"
 
 app = Flask(
     __name__,
-    static_folder=str(BASE_DIR / "frontend"),
+    static_folder=str(_bundle_dir() / "apps/gui/frontend"),
     static_url_path="/",
 )
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -74,6 +91,36 @@ def _check_cancel(job: JobDict) -> None:
         raise RuntimeError("Job cancelled")
 
 
+def _init_logging() -> Path:
+    """Initialize rotating file logging under ~/Library/Logs/TennisTracker."""
+    try:
+        logs_dir = Path.home() / "Library" / "Logs" / "TennisTracker"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        log_file = logs_dir / "tennis_tracker.log"
+
+        root_logger = logging.getLogger()
+        if not root_logger.handlers:
+            root_logger.setLevel(logging.INFO)
+            handler = RotatingFileHandler(str(log_file), maxBytes=5 * 1024 * 1024, backupCount=2)
+            formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+            handler.setFormatter(formatter)
+            root_logger.addHandler(handler)
+        return log_file
+    except Exception:
+        # If logging setup fails, continue silently.
+        return Path("/dev/null")
+
+
+def _install_excepthook() -> None:
+    """Capture any uncaught exceptions into the log file."""
+    def _hook(exc_type, exc_value, exc_traceback):
+        try:
+            logging.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+        except Exception:
+            pass
+    sys.excepthook = _hook
+
+
 def _run_pipeline(job_id: str, yolo_model_filename: str = "yolov8s-pose.pt", conf_thresh: float = 0.25) -> None:
     with jobs_lock:
         job = jobs.get(job_id)
@@ -84,7 +131,7 @@ def _run_pipeline(job_id: str, yolo_model_filename: str = "yolov8s-pose.pt", con
         upload_path = Path(job["paths"]["upload"])  # set during upload
 
         _check_cancel(job) ; _set_step(job, "pose", "in_progress", 1)
-        extractor = PoseExtractor(model_path=yolo_model_filename)
+        extractor = PoseExtractor(model_dir=str(MODELS_DIR), model_path=yolo_model_filename)
         # determine duration
         video_duration = 0.0
         try:
@@ -121,8 +168,8 @@ def _run_pipeline(job_id: str, yolo_model_filename: str = "yolov8s-pose.pt", con
         _set_step(job, "feature", "completed", 100)
 
         _check_cancel(job) ; _set_step(job, "inference", "in_progress", 1)
-        scaler_path = str(ROOT_DIR / "data" / "seq_len_300" / "scaler.joblib")
-        model_ckpt = str(ROOT_DIR / "checkpoints" / "seq_len300" / "best_model.pth")
+        scaler_path = str(DATA_DIR / "seq_len_300" / "scaler.joblib")
+        model_ckpt = str(CHECKPOINTS_DIR / "seq_len300" / "best_model.pth")
         data = np.load(features_npz) ; feature_vectors = data["features"]
         scaler = joblib.load(scaler_path) ; normalized_features = scaler.transform(feature_vectors)
         model, device = load_model_from_checkpoint(model_ckpt, return_logits=False)
@@ -227,11 +274,49 @@ def download_csv(job_id: str):
     return send_file(csv_path, as_attachment=True, download_name=f"{job_id}_segments.csv")
 
 
-def main() -> int:
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port, debug=True, threaded=True)
-    return 0
+def _pick_port(default: int = 8080) -> int:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", default))
+        return default
+    except OSError:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", 0))
+            return s.getsockname()[1]
 
+def open_browser(port: int):
+    """Function to open browser after delay - separate function for threading."""
+    time.sleep(2)  # Wait 2 seconds to ensure server is ready
+    try:
+        webbrowser.open(f"http://127.0.0.1:{port}/")
+    except Exception:
+        # If opening browser fails, that's ok, user can manually open
+        pass
+
+def main() -> int:
+    # Initialize logging and crash capture
+    log_file = _init_logging()
+    _install_excepthook()
+    logging.info("Launching GUI; frozen=%s; log=%s", _is_frozen(), str(log_file))
+
+    # Force production mode and disable reloader regardless of environment
+    os.environ.pop("FLASK_DEBUG", None)
+    os.environ["FLASK_ENV"] = "production"
+
+    port = int(os.environ.get("PORT", _pick_port()))
+    logging.info("Selected port %s", port)
+
+    # Start a thread to open the browser after a short delay
+    # Don't use daemon=True so the thread completes even if main thread finishes setup
+    threading.Thread(target=open_browser, args=(port,), daemon=False).start()
+
+    # Run the app without debug mode and with reloader fully disabled
+    try:
+        app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False, threaded=True)
+    except Exception:
+        logging.exception("Flask server crashed on startup")
+        raise
+    return 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
