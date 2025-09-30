@@ -92,9 +92,9 @@ def _check_cancel(job: JobDict) -> None:
 
 
 def _init_logging() -> Path:
-    """Initialize rotating file logging under ~/Library/Logs/TennisTracker."""
+    """Initialize rotating file logging under ~/Library/Logs/DeepMatch."""
     try:
-        logs_dir = Path.home() / "Library" / "Logs" / "TennisTracker"
+        logs_dir = Path.home() / "Library" / "Logs" / "DeepMatch"
         logs_dir.mkdir(parents=True, exist_ok=True)
         log_file = logs_dir / "tennis_tracker.log"
 

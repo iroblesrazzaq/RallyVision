@@ -1,2 +1,0 @@
-[console_scripts]
-tennis-tracker = tennis_tracker.cli:main
