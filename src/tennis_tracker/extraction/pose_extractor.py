@@ -8,6 +8,7 @@ import av
 from ultralytics import YOLO
 import torch
 from tqdm import tqdm
+import logging
 
 
 class PoseExtractor:
@@ -28,7 +29,8 @@ class PoseExtractor:
 
         env_device = os.environ.get("POSE_DEVICE", "").strip().lower()
         valid_devices = {"cpu", "cuda", "mps"}
-        if env_device in valid_devices:
+        device_from_env = env_device in valid_devices
+        if device_from_env:
             self.device = env_device
         else:
             if profile == "mvp":
@@ -46,19 +48,26 @@ class PoseExtractor:
                 else:
                     self.device = "cpu"
 
+        # Work around known MPS pose performance bug unless user explicitly requests it.
+        if (not device_from_env) and self.device == "mps" and "pose" in self.model_path.lower():
+            logging.warning("POSE: defaulting to cpu due to known MPS pose performance issues; set POSE_DEVICE=mps to force MPS.")
+            self.device = "cpu"
+
         env_bs = os.environ.get("POSE_BATCH_SIZE", "").strip()
         if env_bs.isdigit():
             self.batch_size = int(env_bs)
         else:
             if profile == "mvp":
-                self.batch_size = 1 if self.device == "cpu" else 32
+                self.batch_size = 1 if self.device == "cpu" else 16
             else:
                 if self.device == "mps":
-                    self.batch_size = 16
+                    self.batch_size = 2
                 elif self.device == "cpu":
-                    self.batch_size = 4
+                    self.batch_size = 1
+                elif self.device == "cuda":
+                    self.batch_size = 8
                 else:
-                    self.batch_size = 32
+                    self.batch_size = 1
 
         self.model_path = model_path
         # Prefer local file if model_dir provided and file exists; otherwise let
