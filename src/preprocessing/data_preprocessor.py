@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from tennis_tracker.preprocessing.court_detector import CourtDetector
+from preprocessing.court_detector import CourtDetector
 
 
 class DataPreprocessor:
@@ -157,5 +157,4 @@ class DataPreprocessor:
             import traceback
             traceback.print_exc()
             return False
-
 
