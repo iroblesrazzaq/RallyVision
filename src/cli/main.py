@@ -207,6 +207,7 @@ def run_pipeline(cfg: RunConfig) -> int:
     if cfg.yolo_device:
         os.environ["POSE_DEVICE"] = cfg.yolo_device
     models_dir = str(Path.cwd() / "models")
+    print(f"Models directory: {models_dir}")
     pose_extractor = PoseExtractor(model_path=cfg.yolo_weights, model_dir=models_dir)
     raw_npz = pose_extractor.extract_pose_data(
         video_path=str(cfg.video_path),

@@ -1,42 +1,68 @@
 # RallyVision Tennis Point Detector
 
-CLI tool to detect tennis points from a raw match video and output a segmented video + CSV.
+CLI tool that extracts playable points from a tennis match video and outputs a segmented video (and optional CSV).
+
+## Prereqs
+- Python 3.9–3.11
+- A clean virtual environment is recommended (`python -m venv .venv && source .venv/bin/activate` or conda equivalent).
 
 ## Install
-
 ```bash
+git clone https://github.com/iroblesrazzaq/RallyVision.git
+cd RallyVision
 pip install .
 ```
+Models: ensure `models/` contains `lstm_300_v0.1.pth` and `scaler_300_v0.1.joblib` (see `models/README.md`). YOLO weights auto-download into `models/`.
 
-## Configure
+## Quick run (minimal)
+Only the video path is required; outputs default to `./output_videos` and CSV is off by default.
+```bash
+rallyvision --video "raw_videos/your_match.mp4"
+```
+- Segmented video: `output_videos/<video_stem>_segmented.mp4`
+- CSV (if enabled): `output_csvs/<video_stem>_segments.csv` or the video’s directory
 
-Edit `config.toml` (or point `--config` to your own):
+## Common CLI flags
+- `--video PATH` (required unless in config)  
+- `--output-dir PATH` (default: `./output_videos`)
+- `--csv-output-dir PATH` (default: video directory; enable CSV with `--write-csv`)
+- `--write-csv / --no-csv` (default: off)
+- `--yolo-size {nano,small,medium,large}` (default: small)
+- `--yolo-device {cpu,cuda,mps}` (force pose model device)
+- Thresholds/hyperparams: `--conf`, `--low`, `--high`, `--sigma`, `--seq-len`, `--overlap`, `--min-dur-sec`, `--fps`
+- Model overrides: `--model-path`, `--scaler-path`
+- Config file: `--config path/to/config.toml` (defaults to `./config.toml` if present)
 
+## Config file (config.toml)
+Use a TOML file instead of long CLI flags:
 ```toml
 [run]
-video_path = "raw_videos/your_match.mp4"
-output_dir = "output_videos"
-csv_output_dir = "output_csvs"
-yolo_model = "nano"      # nano | small | medium | large
-yolo_device = "mps"      # cpu | cuda | mps
-write_csv = true
+video_path = "raw_videos/your_match.mp4"   # change this
+output_dir = "output_videos"               # change if desired
+csv_output_dir = "output_csvs"             # optional; defaults to video directory
+
+write_csv = false                          # default is off
 segment_video = true
+yolo_model = "nano"                        # nano | small | medium | large
+yolo_device = "mps"                        # cpu | cuda | mps
+
+# Optional overrides (usually leave as-is):
+# model_path = "models/lstm_300_v0.1.pth"
+# scaler_path = "models/scaler_300_v0.1.joblib"
+
+# Postprocessing / inference tuning (defaults shown)
+fps = 15.0
+seq_len = 300
+overlap = 150
+sigma = 1.5
+low = 0.45
+high = 0.8
+min_dur_sec = 0.5
+conf = 0.25
+start_time = 0
+duration = 999999
 ```
-
-Ensure `models/` contains `lstm_300_v0.1.pth` and `scaler_300_v0.1.joblib` (see `models/README.md`). YOLO weights auto-download.
-
-## Run
-
+Run with:
 ```bash
 rallyvision --config config.toml
 ```
-
-Or override inline:
-
-```bash
-rallyvision --video raw_videos/your_match.mp4 --output-dir output_videos --yolo-size nano --yolo-device mps
-```
-
-Outputs:
-- `<video_stem>_segments.csv` in `csv_output_dir`
-- `<video_stem>_segmented.mp4` in `output_dir`

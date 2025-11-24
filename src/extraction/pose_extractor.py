@@ -74,19 +74,22 @@ class PoseExtractor:
                 else:
                     self.batch_size = 1
 
-        # Prefer local file if model_dir provided and file exists; otherwise let
-        # Ultralytics handle download from model name (e.g., "yolov8s-pose.pt").
+        # Prefer local file if model_dir provided; otherwise let Ultralytics download.
+        model_filename = os.path.basename(self.model_path)
         yolo_arg = self.model_path
         if model_dir:
             os.makedirs(model_dir, exist_ok=True)
+            target_path = os.path.abspath(os.path.join(model_dir, model_filename))
             # Direct ultralytics downloads into the provided models directory
             try:
                 SETTINGS["weights_dir"] = os.path.abspath(model_dir)
             except Exception:
                 pass
-            candidate = os.path.join(model_dir, self.model_path)
-            if os.path.exists(candidate):
-                yolo_arg = candidate
+            if os.path.exists(target_path):
+                yolo_arg = target_path
+            else:
+                # Ask YOLO to download directly to the target path inside models/
+                yolo_arg = target_path
         self.model = YOLO(yolo_arg)
         try:
             self.model.to(self.device)
