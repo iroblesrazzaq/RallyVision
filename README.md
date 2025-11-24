@@ -7,12 +7,23 @@ CLI tool that extracts playable points from a tennis match video and outputs a s
 - A clean virtual environment is recommended (`python -m venv .venv && source .venv/bin/activate` or conda equivalent).
 
 ## Install
+Full (GUI + CLI):
 ```bash
 git clone https://github.com/iroblesrazzaq/RallyVision.git
 cd RallyVision
+pip install .[gui]
+```
+CLI-only (lighter deps):
+```bash
 pip install .
 ```
 Models: ensure `models/` contains `lstm_300_v0.1.pth` and `scaler_300_v0.1.joblib` (see `models/README.md`). YOLO weights auto-download into `models/`.
+
+## GUI (local)
+- Install with GUI extras: `pip install .[gui]` (keeps Flask/CORS optional for CLI-only users).
+- Run: `rallyvision gui` (auto-picks a free localhost port, opens your browser). For request logs/progress bars, use `RALLYVISION_GUI_VERBOSE=1 rallyvision gui`.
+- Drag/drop an MP4 (recommended ≥1080p, 720p minimum). Outputs live under `~/RallyVisionJobs/<job_id>` and are downloadable from the UI.
+- Advanced settings mirror `config.toml` (write CSV, thresholds, YOLO size/device, min duration, start/duration); defaults are pre-filled and should usually be left unchanged.
 
 ## Quick run (minimal)
 Only the video path is required; outputs default to `./output_videos` and CSV is off by default.

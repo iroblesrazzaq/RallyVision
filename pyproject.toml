@@ -26,6 +26,10 @@ train = [
   "matplotlib",
   "pandas",
 ]
+gui = [
+  "Flask>=2.3",
+  "flask-cors>=4.0",
+]
 
 [project.scripts]
 rallyvision = "cli:main"
