@@ -11,17 +11,17 @@ import joblib
 import numpy as np
 import scipy.ndimage
 
-from tennis_tracker.extraction.pose_extractor import PoseExtractor
-from tennis_tracker.features.feature_engineer import FeatureEngineer
-from tennis_tracker.infer import (
+from extraction.pose_extractor import PoseExtractor
+from features.feature_engineer import FeatureEngineer
+from infer import (
     extract_segments_from_binary,
     hysteresis_threshold,
     load_model_from_checkpoint,
     run_windowed_inference_average,
     write_segments_csv,
 )
-from tennis_tracker.preprocessing.data_preprocessor import DataPreprocessor
-from tennis_tracker.segmentation.segment import segment_video
+from preprocessing.data_preprocessor import DataPreprocessor
+from segmentation.segment import segment_video
 
 try:  # Python 3.11+ ships tomllib; fall back to tomli otherwise.
     import tomllib

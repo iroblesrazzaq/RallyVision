@@ -30,11 +30,10 @@ train = [
 ]
 
 [project.scripts]
-deepmatch = "tennis_tracker.cli:main"
+deepmatch = "cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
