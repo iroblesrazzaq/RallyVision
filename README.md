@@ -50,15 +50,21 @@ yolo_device = "mps"                        # cpu | cuda | mps
 # model_path = "models/lstm_300_v0.1.pth"
 # scaler_path = "models/scaler_300_v0.1.joblib"
 
-# Postprocessing / inference tuning (defaults shown)
-fps = 15.0
-seq_len = 300
-overlap = 150
-sigma = 1.5
+# Postprocessing parameters: 
+# to make the model more sensitive (i.e. detect more points from same signal)
+# decrease high, slightly decrease low; vice-versa.
 low = 0.45
 high = 0.8
+
+
+
+# Other parameters: (usually leave as-is)
+sigma = 1.5 # for temporal signal gaussian smoothing, ot super relevant
+fps = 15.0 # do not modify
+seq_len = 300 # do not modify
+overlap = 150 # probably don't modify
 min_dur_sec = 0.5
-conf = 0.25
+conf = 0.25 # yolo pose confidence threshold, .25 is well tuned
 start_time = 0
 duration = 999999
 ```
