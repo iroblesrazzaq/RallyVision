@@ -1,4 +1,4 @@
-# DeepMatch Tennis Point Detector
+# RallyVision Tennis Point Detector
 
 CLI tool to detect tennis points from a raw match video and output a segmented video + CSV.
 
@@ -28,13 +28,13 @@ Ensure `models/` contains `lstm_300_v0.1.pth` and `scaler_300_v0.1.joblib` (see 
 ## Run
 
 ```bash
-deepmatch --config config.toml
+rallyvision --config config.toml
 ```
 
 Or override inline:
 
 ```bash
-deepmatch --video raw_videos/your_match.mp4 --output-dir output_videos --yolo-size nano --yolo-device mps
+rallyvision --video raw_videos/your_match.mp4 --output-dir output_videos --yolo-size nano --yolo-device mps
 ```
 
 Outputs:

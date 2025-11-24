@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "deepmatch"
+name = "rallyvision"
 version = "0.1.0"
 description = "AI-powered tennis match analysis CLI"
 readme = "README.md"
@@ -28,7 +28,7 @@ train = [
 ]
 
 [project.scripts]
-deepmatch = "cli:main"
+rallyvision = "cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

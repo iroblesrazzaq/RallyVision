@@ -110,7 +110,7 @@ def _load_config_dict(path: Optional[str]) -> Dict[str, Any]:
         if not cfg_path.exists():
             raise FileNotFoundError(f"Config file not found at '{cfg_path}'")
     else:
-        cfg_path = Path("deepmatch.toml")
+        cfg_path = Path("config.toml")
         if not cfg_path.exists():
             return {}
     with cfg_path.open("rb") as f:
@@ -126,7 +126,7 @@ def _pick_bool(arg_val: Optional[bool], cfg_val: Optional[Any], default: bool) -
 
 
 def build_run_config(args: argparse.Namespace) -> RunConfig:
-    cfg_path = args.config or ("config.toml" if Path("config.toml").exists() else "deepmatch.toml")
+    cfg_path = args.config or ("config.toml" if Path("config.toml").exists() else None)
     cfg_dict = _load_config_dict(cfg_path) if (cfg_path and Path(cfg_path).exists()) else {}
     cfg_section = cfg_dict.get("run", cfg_dict) if isinstance(cfg_dict, dict) else {}
 
@@ -136,7 +136,7 @@ def build_run_config(args: argparse.Namespace) -> RunConfig:
     video_path = args.video or cfg("video_path")
     output_dir = args.output_dir or cfg("output_dir")
     if not video_path or not output_dir:
-        raise SystemExit("Please provide both video and output_dir via CLI flags or deepmatch.toml [run] section.")
+        raise SystemExit("Please provide both video and output_dir via CLI flags or config [run] section.")
 
     output_name = args.output_name or cfg("output_name")
     csv_output_dir_raw = args.csv_output_dir or cfg("csv_output_dir")
@@ -262,8 +262,8 @@ def run_pipeline(cfg: RunConfig) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="DeepMatch end-to-end CLI with optional deepmatch.toml config.")
-    p.add_argument("--config", help="Path to deepmatch.toml. If omitted, looks for ./deepmatch.toml.")
+    p = argparse.ArgumentParser(description="RallyVision end-to-end CLI with optional config.toml.")
+    p.add_argument("--config", help="Path to config.toml. If omitted, looks for ./config.toml.")
     p.add_argument("--video", help="Path to input MP4 video")
     p.add_argument("--output-dir", help="Directory to store outputs")
     p.add_argument("--output-name", help="Optional base name for outputs (without extension)")
