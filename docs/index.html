@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RallyVision — Free Tennis Match Segmentation</title>
+    <title>RallyVision | Free Tennis Match Segmentation</title>
     <meta name="description" content="Open-source AI tool that extracts only the rallies from tennis match recordings.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,17 +32,17 @@
             <!-- About -->
             <section id="about">
                 <h2>What It Does</h2>
-                <p>RallyVision takes a full tennis match recording and extracts only the points—removing the dead time between rallies. Drop in a 2-hour match video, get back a condensed video containing just the action, plus an optional CSV with timestamps for each point.</p>
+                <p>RallyVision takes a full tennis match recording and extracts only the points, removing the dead time between rallies. Drop in a 2-hour match video, get back a condensed video containing just the action, plus an optional CSV with timestamps for each point.</p>
                 <p>It works through a pipeline of computer vision and deep learning: court detection, pose estimation with YOLOv8, feature engineering, and a bidirectional LSTM that predicts frame-by-frame whether play is happening. The result is a segmented video with only the rallies, ready for review.</p>
             </section>
 
             <!-- Motivation -->
             <section id="motivation">
                 <h2>Motivation</h2>
-                <p>Watching yourself play is one of the best ways to get better at competing in tennis. However, only ~25% of a recorded match is spent "in-point"—the rest is dead time. When you're going through your footage, it's a pain to have to parse through this dead time to get to the actual points.</p>
+                <p>Watching yourself play is one of the best ways to get better at competing in tennis. However, only ~25% of a recorded match is spent "in-point"; the rest is dead time. When you're going through your footage, it's a pain to have to parse through this dead time to get to the actual points.</p>
                 <p>Software like SwingVision has tools that accomplish this exactly. However, SwingVision only allows you 2 hours a month free of match segmentation, forcing you to buy their expensive subscription. While SwingVision does have many more analytics, their match segmentation is one of their most popular and useful features.</p>
                 <p>I built RallyVision (there's not a ton of tennis/computer vision name schemes so cut me some slack on the name) to solve this problem exactly. <strong>I believe this match segmentation should be made free for anyone to use</strong>, which is why I made RallyVision open-source and local.</p>
-                <p>To avoid the costs of cloud compute, you run RallyVision directly on your computer. There are trade-offs with this: this type of video inference is computationally expensive, so running it on your laptop may take some time. I'm using a MacBook Pro M2—here are the metrics for running it on my laptop. Note that using GPU acceleration significantly improves performance:</p>
+                <p>To avoid the costs of cloud compute, you run RallyVision directly on your computer. There are trade-offs with this: this type of video inference is computationally expensive, so running it on your laptop may take some time. I'm using a MacBook Pro M2, and here are the metrics for running it on my laptop. Note that using GPU acceleration significantly improves performance:</p>
                 
                 <table>
                     <thead>
@@ -99,13 +99,13 @@
                 
                 <h3>Choosing the Data Modality</h3>
                 <p>Firstly, I had to decide on a data modality to train my models on.</p>
-                <p><strong>Raw video/images:</strong> The pure image/video is computationally infeasible. Training a video transformer or CNN to extract relevant features—even if training on single frames and not including temporal convolutions—CNNs would require much more data than I could reasonably gain access to.</p>
+                <p><strong>Raw video/images:</strong> The pure image/video is computationally infeasible. Training a video transformer or CNN to extract relevant features, even if training on single frames and not including temporal convolutions, would require much more data than I could reasonably gain access to.</p>
                 <p><strong>Sound:</strong> Using sound fails for several reasons: (1) Videos with multiple courts make it very difficult to differentiate if the sound of the racket hitting the ball came from the relevant or irrelevant match. (2) Not all shots produce sound, not all players hit hard enough to make loud enough sounds to detect. (3) Sound can be noisy/inconsistent, or a recording may not even have sound.</p>
-                <p><strong>Ball tracking:</strong> Ball tracking is doable—but can fail in obfuscation cases, or when the court and ball blend together—it can be very hard to see.</p>
-                <p><strong>Player poses:</strong> I finally decided on using player pose data. A point being in play requires the players to move and swing their rackets in distinct patterns. Furthermore, as players will almost certainly be visible in frame during points, they will provide a consistent signal. Lastly, pose extraction is computationally cheap—the YOLOv8-pose models I use are 3.1 and 11.6 million parameters, which result in fast feature extraction.</p>
+                <p><strong>Ball tracking:</strong> Ball tracking is doable, but can fail in obfuscation cases, or when the court and ball blend together. It can be very hard to see.</p>
+                <p><strong>Player poses:</strong> I finally decided on using player pose data. A point being in play requires the players to move and swing their rackets in distinct patterns. Furthermore, as players will almost certainly be visible in frame during points, they will provide a consistent signal. Lastly, pose extraction is computationally cheap: the YOLOv8-pose models I use are 3.1 and 11.6 million parameters, which result in fast feature extraction.</p>
                 
                 <h3>Training Data</h3>
-                <p>Lastly, there are no publicly available datasets I can use to train on this—<strong>I manually annotated data for ~8 hours of matches</strong> to train my first models on. I'm quite proud that I built a functioning model trained on such low amounts of data, proof that with clever engineering you can achieve similar results to brute-force big data approaches.</p>
+                <p>Lastly, there are no publicly available datasets I can use to train on this, so <strong>I manually annotated data for ~8 hours of matches</strong> to train my first models on. I'm quite proud that I built a functioning model trained on such low amounts of data, proof that with clever engineering you can achieve similar results to brute-force big data approaches.</p>
                 
                 <h3>Limitations</h3>
                 <p>If the court detection mask fails and there are more people on the screen than the 2 players, the model could fail as pose detector could pick up on wrong people, and output would be completely unreliable. There are very few cases where this occurs: mainly in low light conditions where classical CV methods fail to detect edges, or where the camera angle is terrible.</p>
@@ -117,7 +117,7 @@
                 <h2>Future Improvements</h2>
                 <ul>
                     <li><strong>Model distillation:</strong> Currently, the YOLO nano pose model is computationally the most feasible, but at the cost of some accuracy compared to YOLO small. I plan to fine-tune the nano YOLO pose model on the outputs of the YOLO large model to close this gap while keeping efficient computation.</li>
-                    <li><strong>More data:</strong> I will increase and augment data—using some more hand-labelled data, and using model outputs to create more training data.</li>
+                    <li><strong>More data:</strong> I will increase and augment data, using some more hand-labelled data, and using model outputs to create more training data.</li>
                     <li><strong>Attention mechanisms:</strong> As my data increases, I will switch to LSTM with attention, which will improve performance, as it can learn which parts of the 20s window are most relevant with respect to each other.</li>
                     <li><strong>Rally detection:</strong> Finally, I will add a rally detection model. My current model doesn't perform as well on this because it has presumably learned that a service or return motion is associated with the start of a point. I'll simply train a model with the same pipeline on rally data instead of match data.</li>
                 </ul>
@@ -145,7 +145,7 @@ pip install .</code></pre>
                 <p>Drag and drop your video, adjust settings if needed, and download the result. The GUI provides real-time progress tracking and advanced settings.</p>
                 
                 <h3>CLI</h3>
-<pre><code><span class="comment"># Basic usage—only video path required</span>
+<pre><code><span class="comment"># Basic usage (only video path required)</span>
 rallyvision --video "match.mp4"
 
 <span class="comment"># With CSV output</span>
