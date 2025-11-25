@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RallyVision | Free Tennis Match Segmentation</title>
+    <title>RallyClip | Free Tennis Match Segmentation</title>
     <meta name="description" content="Open-source AI tool that extracts only the rallies from tennis match recordings.">
-    <link rel="icon" type="image/png" href="rallyvision_favicon_transparent2.png">
-    <link rel="apple-touch-icon" href="rallyvision_favicon_transparent2.png">
+    <link rel="icon" type="image/png" href="rallyclip_favicon_transparent2.png">
+    <link rel="apple-touch-icon" href="rallyclip_favicon_transparent2.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,9 +16,10 @@
     <div class="page">
         <header class="header">
             <p class="byline">A project by <strong>Ismael Robles-Razzaq</strong></p>
-            <h1>RallyVision</h1>
+            <img src="rallyclip_favicon_transparent2.png" alt="RallyClip logo" class="header-logo">
+            <h1>RallyClip</h1>
             <p class="tagline">Free, open-source tennis match segmentation.<br>Runs entirely on your machine.</p>
-            <a href="https://github.com/iroblesrazzaq/RallyVision" class="github-link" target="_blank">GitHub ↗</a>
+            <a href="https://github.com/iroblesrazzaq/RallyClip" class="github-link" target="_blank">GitHub ↗</a>
         </header>
 
         <nav class="nav">
@@ -34,7 +35,7 @@
             <!-- About -->
             <section id="about">
                 <h2>What It Does</h2>
-                <p>RallyVision takes a full tennis match recording and extracts only the points, removing the dead time between rallies. Drop in a 2-hour match video, get back a condensed video containing just the action, plus an optional CSV with timestamps for each point.</p>
+                <p>RallyClip takes a full tennis match recording and extracts only the points, removing the dead time between rallies. Drop in a 2-hour match video, get back a condensed video containing just the action, plus an optional CSV with timestamps for each point.</p>
                 <p>It works through a pipeline of computer vision and deep learning: court detection, pose estimation with YOLOv8, feature engineering, and a bidirectional LSTM that predicts frame-by-frame whether play is happening. The result is a segmented video with only the rallies, ready for review.</p>
             </section>
 
@@ -43,8 +44,8 @@
                 <h2>Motivation</h2>
                 <p>Watching yourself play is one of the best ways to get better at competing in tennis. However, only ~25% of a recorded match is spent "in-point"; the rest is dead time. When you're going through your footage, it's a pain to have to parse through this dead time to get to the actual points.</p>
                 <p>Software like SwingVision has tools that accomplish this exactly. However, SwingVision only allows you 2 hours a month free of match segmentation, forcing you to buy their expensive subscription. While SwingVision does have many more analytics, their match segmentation is one of their most popular and useful features.</p>
-                <p>I built RallyVision (there's not a ton of tennis/computer vision name schemes so cut me some slack on the name) to solve this problem exactly. <strong>I believe this match segmentation should be made free for anyone to use</strong>, which is why I made RallyVision open-source and local.</p>
-                <p>To avoid the costs of cloud compute, you run RallyVision directly on your computer. There are trade-offs with this: this type of video inference is computationally expensive, so running it on your laptop may take some time. I'm using a MacBook Pro M2, and here are the metrics for running it on my laptop. Note that using GPU acceleration significantly improves performance:</p>
+                <p>I built RallyClip (there's not a ton of tennis/computer vision name schemes so cut me some slack on the name) to solve this problem exactly. <strong>I believe this match segmentation should be made free for anyone to use</strong>, which is why I made RallyClip open-source and local.</p>
+                <p>To avoid the costs of cloud compute, you run RallyClip directly on your computer. There are trade-offs with this: this type of video inference is computationally expensive, so running it on your laptop may take some time. I'm using a MacBook Pro M2, and here are the metrics for running it on my laptop. Note that using GPU acceleration significantly improves performance:</p>
                 
                 <table>
                     <thead>
@@ -122,7 +123,7 @@
                     <li><strong>More data:</strong> I will increase and augment data, using some more hand-labelled data, and using model outputs to create more training data.</li>
                     <li><strong>Attention mechanisms:</strong> As my data increases, I will switch to LSTM with attention, which will improve performance, as it can learn which parts of the 20s window are most relevant with respect to each other.</li>
                     <li><strong>Rally detection:</strong> Finally, I will add a rally detection model. My current model doesn't perform as well on this because it has presumably learned that a service or return motion is associated with the start of a point. I'll simply train a model with the same pipeline on rally data instead of match data.</li>
-                    <li><strong>Fully installable app:</strong> Make RallyVision a standalone desktop app that requires no terminal commands. Fully non-technical friendly, just download and run.</li>
+                    <li><strong>Fully installable app:</strong> Make RallyClip a standalone desktop app that requires no terminal commands. Fully non-technical friendly, just download and run.</li>
                     <li><strong>Cloud compute option:</strong> A pay-per-minute cloud service for fast and cheap segmentation. For those who don't want to run it locally or need faster processing.</li>
                 </ul>
                 <p class="note">If you have any potential improvements, please PR them! I'm super open to feedback and help.</p>
@@ -133,8 +134,8 @@
                 <h2>Installation</h2>
                 <p class="requirements">Requires Python 3.10+. 8GB+ RAM recommended. GPU optional (MPS/CUDA supported).</p>
 <pre><code><span class="comment"># Clone and install</span>
-git clone https://github.com/iroblesrazzaq/RallyVision.git
-cd RallyVision
+git clone https://github.com/iroblesrazzaq/RallyClip.git
+cd RallyClip
 pip install .</code></pre>
                 <p class="caption">Models are included in the repo. YOLO weights auto-download on first run.</p>
             </section>
@@ -145,29 +146,29 @@ pip install .</code></pre>
                 
                 <h3>GUI</h3>
                 <p>Launch the browser-based interface:</p>
-<pre><code>rallyvision gui</code></pre>
+<pre><code>rallyclip gui</code></pre>
                 <p>Drag and drop your video, adjust settings if needed, and download the result. The GUI provides real-time progress tracking and advanced settings.</p>
                 
                 <h3>CLI</h3>
 <pre><code><span class="comment"># Basic usage (only video path required)</span>
-rallyvision --video "match.mp4"
+rallyclip --video "match.mp4"
 
 <span class="comment"># With CSV output</span>
-rallyvision --video "match.mp4" --write-csv
+rallyclip --video "match.mp4" --write-csv
 
 <span class="comment"># Custom output directory</span>
-rallyvision --video "match.mp4" --output-dir "./processed"
+rallyclip --video "match.mp4" --output-dir "./processed"
 
 <span class="comment"># Use config file for all options</span>
-rallyvision --config config.toml</code></pre>
-                <p>See the <a href="https://github.com/iroblesrazzaq/RallyVision#readme" target="_blank">README</a> for full CLI options and config file documentation.</p>
+rallyclip --config config.toml</code></pre>
+                <p>See the <a href="https://github.com/iroblesrazzaq/RallyClip#readme" target="_blank">README</a> for full CLI options and config file documentation.</p>
             </section>
         </main>
 
         <footer class="footer">
-            <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank">GitHub</a>
+            <a href="https://github.com/iroblesrazzaq/RallyClip" target="_blank">GitHub</a>
             <span>·</span>
-            <a href="https://github.com/iroblesrazzaq/RallyVision/issues" target="_blank">Issues</a>
+            <a href="https://github.com/iroblesrazzaq/RallyClip/issues" target="_blank">Issues</a>
             <span>·</span>
             <span>MIT License</span>
         </footer>

@@ -1,5 +1,5 @@
 /*
- * RallyVision — Cream minimal aesthetic
+ * RallyClip — Cream minimal aesthetic
  */
 
 * {
@@ -44,6 +44,14 @@ body {
 .byline strong {
     color: #1a1a1a;
     font-weight: 500;
+}
+
+.header-logo {
+    display: block;
+    width: 100px;
+    height: 100px;
+    margin: 0 0 20px 0;
+    object-fit: contain;
 }
 
 .header h1 {

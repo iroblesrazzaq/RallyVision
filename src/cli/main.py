@@ -271,12 +271,12 @@ def main() -> int:
         except SystemExit:
             raise
         except Exception as exc:  # pragma: no cover - runtime safety
-            print("rallyvision gui requires Flask. Reinstall with `pip install .`.", file=sys.stderr)
+            print("rallyclip gui requires Flask. Reinstall with `pip install .`.", file=sys.stderr)
             print(f"Details: {exc}", file=sys.stderr)
             return 1
         return launch()
 
-    p = argparse.ArgumentParser(description="RallyVision end-to-end CLI with optional config.toml.")
+    p = argparse.ArgumentParser(description="RallyClip end-to-end CLI with optional config.toml.")
     p.add_argument("--config", help="Path to config.toml. If omitted, looks for ./config.toml.")
     p.add_argument("--video", required=False, help="Path to input MP4 video (required unless set in config)")
     p.add_argument("--output-dir", help="Directory to store outputs (defaults to ./output_videos)")

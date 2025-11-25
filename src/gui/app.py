@@ -19,7 +19,7 @@ try:
     from werkzeug.utils import secure_filename
 except ImportError as exc:  # pragma: no cover - handled at runtime
     raise SystemExit(
-        "rallyvision gui requires Flask. Reinstall with `pip install .`."
+        "rallyclip gui requires Flask. Reinstall with `pip install .`."
     ) from exc
 
 import joblib
@@ -57,12 +57,12 @@ STATIC_DIR = _find_static_dir()
 
 
 def _default_jobs_dir() -> Path:
-    """Pick a jobs/output root inside the RallyVision install if possible; fallback to CWD."""
+    """Pick a jobs/output root inside the RallyClip install if possible; fallback to CWD."""
     for root in _candidate_roots():
         root_path = Path(root).resolve()
         if (root_path / "models").exists() or (root_path / "apps").exists():
-            return (root_path / "RallyVisionJobs").resolve()
-    return (Path.cwd() / "RallyVisionJobs").resolve()
+            return (root_path / "RallyClipJobs").resolve()
+    return (Path.cwd() / "RallyClipJobs").resolve()
 
 
 def _default_output_dir() -> Path:
@@ -82,7 +82,7 @@ def _default_csv_dir() -> Path:
 
 
 def _keep_jobs() -> bool:
-    return os.environ.get("RALLYVISION_KEEP_JOBS", "").strip().lower() in {"1", "true", "yes"}
+    return os.environ.get("RALLYCLIP_KEEP_JOBS", "").strip().lower() in {"1", "true", "yes"}
 
 
 def _sweep_old_jobs(max_age_hours: int = 24) -> None:
@@ -584,7 +584,7 @@ def download_csv(job_id: str):
 
 
 def launch(port: Optional[int] = None) -> int:
-    verbose = os.environ.get("RALLYVISION_GUI_VERBOSE", "").strip().lower() in {"1", "true", "yes"}
+    verbose = os.environ.get("RALLYCLIP_GUI_VERBOSE", "").strip().lower() in {"1", "true", "yes"}
     log_level = logging.INFO if verbose else logging.ERROR
     logging.basicConfig(level=log_level, format="%(asctime)s [%(levelname)s] %(message)s")
     # Quiet Flask/werkzeug unless verbose
@@ -592,7 +592,7 @@ def launch(port: Optional[int] = None) -> int:
         logging.getLogger(name).setLevel(log_level)
     if not verbose:
         # Disable tqdm bars in GUI mode to keep the terminal clean
-        os.environ.setdefault("RALLYVISION_NO_TQDM", "1")
+        os.environ.setdefault("RALLYCLIP_NO_TQDM", "1")
         # Suppress the Flask devserver banner
         try:
             import flask.cli  # type: ignore
@@ -601,7 +601,7 @@ def launch(port: Optional[int] = None) -> int:
             pass
     _sweep_old_jobs()
     preferred_ports: list[int] = []
-    env_port = os.environ.get("RALLYVISION_GUI_PORT")
+    env_port = os.environ.get("RALLYCLIP_GUI_PORT")
     if port:
         preferred_ports.append(int(port))
     if env_port:

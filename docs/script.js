@@ -1,4 +1,4 @@
-// Minimal scripts for RallyVision
+// Minimal scripts for RallyClip
 
 document.addEventListener('DOMContentLoaded', () => {
     // Smooth scroll for anchor links

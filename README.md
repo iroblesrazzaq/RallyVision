@@ -1,4 +1,4 @@
-# RallyVision Tennis Point Detector
+# RallyClip Tennis Point Detector
 
 CLI and GUI tool that extracts points from full tennis match video and outputs a segmented video (and optional CSV).
 
@@ -8,23 +8,23 @@ CLI and GUI tool that extracts points from full tennis match video and outputs a
 
 ## Install
 ```bash
-git clone https://github.com/iroblesrazzaq/RallyVision.git
-cd RallyVision
+git clone https://github.com/iroblesrazzaq/RallyClip.git
+cd RallyClip
 pip install .
 ```
 
 Models: ensure `models/` contains `lstm_300_v0.1.pth` and `scaler_300_v0.1.joblib` (see `models/README.md`). YOLO weights auto-download into `models/`.
 
 ## GUI (local)
-- Run: `rallyvision gui` (auto-picks a free localhost port, opens your browser). `Ctrl-C` to quit.
-- For request logs, use `RALLYVISION_GUI_VERBOSE=1 rallyvision gui`.
-- Drag/drop an MP4 (recommended ≥1080p, 720p minimum). Outputs live under `~/RallyVisionJobs/<job_id>` and are downloadable from the UI.
+- Run: `rallyclip gui` (auto-picks a free localhost port, opens your browser). `Ctrl-C` to quit.
+- For request logs, use `RALLYCLIP_GUI_VERBOSE=1 rallyclip gui`.
+- Drag/drop an MP4 (recommended ≥1080p, 720p minimum). Outputs live under `~/RallyClipJobs/<job_id>` and are downloadable from the UI.
 - Advanced settings mirror `config.toml` (write CSV, thresholds, YOLO size/device, min duration, start/duration); defaults are pre-filled and should usually be left unchanged.
 
 ## Quick run (minimal)
 Only the video path is required; outputs default to `./output_videos` and CSV is off by default.
 ```bash
-rallyvision --video "raw_videos/your_match.mp4"
+rallyclip --video "raw_videos/your_match.mp4"
 ```
 - Segmented video: `output_videos/<video_stem>_segmented.mp4`
 - CSV (if enabled): `output_csvs/<video_stem>_segments.csv` or the video’s directory
@@ -80,5 +80,5 @@ duration = 999999
 ```
 Run with:
 ```bash
-rallyvision --config config.toml
+rallyclip --config config.toml
 ```
