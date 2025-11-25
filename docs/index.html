@@ -3,318 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RallyVision - AI Tennis Point Detection</title>
-    <meta name="description" content="Free and open source AI-powered tool that extracts points from tennis match videos. CLI and GUI available.">
+    <title>RallyVision — Free Tennis Match Segmentation</title>
+    <meta name="description" content="Open-source AI tool that extracts only the rallies from tennis match recordings. Built to make match analysis accessible to everyone.">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Animated Background -->
-    <div class="bg-grid"></div>
-    <div class="bg-glow bg-glow-1"></div>
-    <div class="bg-glow bg-glow-2"></div>
-    
-    <!-- Navigation -->
     <nav class="nav">
-        <div class="nav-content">
-            <a href="#" class="nav-logo">
-                <span class="logo-icon">🎾</span>
-                <span class="logo-text">RallyVision</span>
-            </a>
-            <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#install">Install</a>
-                <a href="#usage">Usage</a>
-                <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank" class="nav-github">
-                    <i class="fab fa-github"></i>
-                    GitHub
-                </a>
-            </div>
+        <a href="#" class="nav-logo">RallyVision</a>
+        <div class="nav-links">
+            <a href="#motivation">Motivation</a>
+            <a href="#how-it-works">How It Works</a>
+            <a href="#challenges">Challenges</a>
+            <a href="#install">Install</a>
+            <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank" class="nav-github">GitHub ↗</a>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <header class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">
-                <span class="badge-dot"></span>
-                Open Source & Free
+    <main class="container">
+        <!-- Hero -->
+        <header class="hero">
+            <h1>RallyVision</h1>
+            <p class="hero-tagline">Free, open-source tennis match segmentation that runs entirely on your machine.</p>
+            <div class="hero-links">
+                <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank">View on GitHub ↗</a>
             </div>
-            <h1 class="hero-title">
-                AI-Powered<br>
-                <span class="gradient-text">Tennis Point</span><br>
-                Detection
-            </h1>
-            <p class="hero-subtitle">
-                Drop in a full tennis match video. Get a segmented video with only the rallies.<br>
-                No cloud processing. Runs entirely on your machine.
+        </header>
+
+        <!-- What It Does -->
+        <section class="section" id="what">
+            <h2>What It Does</h2>
+            <p>
+                RallyVision takes a full tennis match recording and extracts only the points—removing the dead time between rallies. 
+                Drop in a 2-hour match video, get back a condensed video containing just the action, plus an optional CSV with timestamps for each point.
             </p>
-            <div class="hero-actions">
-                <a href="https://github.com/iroblesrazzaq/RallyVision" class="btn btn-primary" target="_blank">
-                    <i class="fab fa-github"></i>
-                    Get Started
-                </a>
-                <a href="#features" class="btn btn-ghost">
-                    Learn More
-                    <i class="fas fa-arrow-down"></i>
-                </a>
-            </div>
-            <div class="hero-tech">
-                <span class="tech-tag">PyTorch</span>
-                <span class="tech-tag">YOLOv8</span>
-                <span class="tech-tag">LSTM</span>
-                <span class="tech-tag">OpenCV</span>
-            </div>
-        </div>
-        <div class="hero-visual">
-            <div class="court-container">
-                <div class="court">
-                    <div class="court-line court-line-h"></div>
-                    <div class="court-line court-line-v"></div>
-                    <div class="court-line court-line-service-t"></div>
-                    <div class="court-line court-line-service-b"></div>
-                    <div class="court-net"></div>
-                    <div class="ball ball-1"></div>
-                    <div class="ball ball-2"></div>
-                    <div class="ball ball-3"></div>
-                </div>
-            </div>
-        </div>
-    </header>
+            <p>
+                It works through a pipeline of computer vision and deep learning: court detection, pose estimation with YOLOv8, 
+                feature engineering, and a bidirectional LSTM that predicts frame-by-frame whether play is happening. 
+                The result is segmented video with only the rallies, ready for review.
+            </p>
+        </section>
 
-    <!-- Features Section -->
-    <section id="features" class="features">
-        <div class="section-header">
-            <span class="section-tag">Features</span>
-            <h2>Everything you need to<br><span class="gradient-text">segment tennis matches</span></h2>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-running"></i>
-                </div>
-                <h3>Pose Detection</h3>
-                <p>Uses YOLOv8 pose estimation to track player movements and keypoints throughout the match.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-brain"></i>
-                </div>
-                <h3>LSTM Analysis</h3>
-                <p>Deep learning model analyzes temporal patterns to identify when points are being played.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-cut"></i>
-                </div>
-                <h3>Smart Segmentation</h3>
-                <p>Automatically cuts out dead time between points, keeping only the action.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-table"></i>
-                </div>
-                <h3>CSV Export</h3>
-                <p>Optionally export point timestamps to CSV for further analysis or visualization.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-desktop"></i>
-                </div>
-                <h3>GUI & CLI</h3>
-                <p>Use the browser-based interface for simplicity, or the CLI for scripting and automation.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">
-                    <i class="fas fa-lock"></i>
-                </div>
-                <h3>100% Local</h3>
-                <p>All processing happens on your machine. No data leaves your computer.</p>
-            </div>
-        </div>
-    </section>
+        <!-- Motivation -->
+        <section class="section" id="motivation">
+            <h2>Motivation</h2>
+            <p>
+                Watching yourself play is one of the best ways to get better at competing in tennis. However, only ~25% of a recorded match is spent "in-point"—the rest is dead time. When you're going through your footage, it's a pain to have to parse through this dead time to get to the actual points.
+            </p>
+            <p>
+                Software like SwingVision has tools that accomplish this exactly. However, SwingVision only allows you 2 hours a month free of match segmentation, forcing you to buy their expensive subscription. While SwingVision does have many more analytics, their match segmentation is one of their most popular and useful features.
+            </p>
+            <p>
+                I built RallyVision (there's not a ton of tennis/computer vision name schemes so cut me some slack on the name) to solve this problem exactly. <strong>I believe match segmentation should be free for anyone to use</strong>, which is why I made RallyVision open-source and local.
+            </p>
+            <p>
+                To avoid the costs of cloud compute, you run RallyVision directly on your computer. There are trade-offs with this: video inference is computationally expensive, so running it on your laptop may take some time.
+            </p>
 
-    <!-- Pipeline Section -->
-    <section class="pipeline">
-        <div class="section-header">
-            <span class="section-tag">How It Works</span>
-            <h2>The processing <span class="gradient-text">pipeline</span></h2>
-        </div>
-        <div class="pipeline-steps">
-            <div class="pipeline-step">
-                <div class="step-number">01</div>
-                <div class="step-content">
-                    <h4>Pose Extraction</h4>
-                    <p>YOLOv8 detects and tracks player poses frame by frame</p>
-                </div>
-            </div>
-            <div class="pipeline-connector"></div>
-            <div class="pipeline-step">
-                <div class="step-number">02</div>
-                <div class="step-content">
-                    <h4>Feature Engineering</h4>
-                    <p>Extract motion features and normalize keypoint positions</p>
-                </div>
-            </div>
-            <div class="pipeline-connector"></div>
-            <div class="pipeline-step">
-                <div class="step-number">03</div>
-                <div class="step-content">
-                    <h4>LSTM Inference</h4>
-                    <p>Neural network predicts play/no-play probability per frame</p>
-                </div>
-            </div>
-            <div class="pipeline-connector"></div>
-            <div class="pipeline-step">
-                <div class="step-number">04</div>
-                <div class="step-content">
-                    <h4>Video Output</h4>
-                    <p>Segments combined into final video with only rallies</p>
-                </div>
-            </div>
-        </div>
-    </section>
+            <h3>Performance Benchmarks</h3>
+            <p class="benchmark-note">Tested on MacBook Pro M2. Times shown as multiples of video length (lower is better).</p>
+            <table class="benchmark-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>MPS (GPU)</th>
+                        <th>CPU</th>
+                        <th>GPU Speedup</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>YOLO nano</td>
+                        <td>~0.8× video length</td>
+                        <td>~3× video length</td>
+                        <td>~3.75×</td>
+                    </tr>
+                    <tr>
+                        <td>YOLO small</td>
+                        <td>~1.5× video length</td>
+                        <td>~7× video length</td>
+                        <td>~4.7×</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="benchmark-note">GPU acceleration provides ~4× gains. If you have CUDA or MPS available, use it.</p>
+        </section>
 
-    <!-- Install Section -->
-    <section id="install" class="install">
-        <div class="section-header">
-            <span class="section-tag">Installation</span>
-            <h2>Get up and running<br><span class="gradient-text">in minutes</span></h2>
-        </div>
-        <div class="install-content">
-            <div class="install-requirements">
-                <h3>Requirements</h3>
-                <ul>
-                    <li><i class="fab fa-python"></i> Python 3.10+</li>
-                    <li><i class="fas fa-memory"></i> 8GB+ RAM recommended</li>
-                    <li><i class="fas fa-microchip"></i> GPU optional (MPS/CUDA supported)</li>
-                </ul>
-            </div>
-            <div class="install-steps">
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-lang">bash</span>
-                        <button class="copy-btn" data-code="git clone https://github.com/iroblesrazzaq/RallyVision.git
-cd RallyVision
-pip install .">
-                            <i class="fas fa-copy"></i>
-                        </button>
+        <!-- How It Works -->
+        <section class="section" id="how-it-works">
+            <h2>How It Works</h2>
+            
+            <div class="pipeline">
+                <div class="pipeline-step">
+                    <span class="step-num">1</span>
+                    <div class="step-content">
+                        <h4>Court Detection</h4>
+                        <p>
+                            Runs a script to find the lines of the court using classical CV methods to detect lines, then uses heuristics based on line angles to detect the near baseline, singles and doubles sidelines. From those, it creates a court mask of the region where the players would be.
+                        </p>
+                        <p>
+                            This enables us to only use bounding boxes from players in the playable area—if there are other players/people on nearby courts, this ensures we don't use their pose data in our model.
+                        </p>
                     </div>
-                    <pre><code><span class="code-comment"># Clone and install</span>
+                </div>
+
+                <div class="pipeline-step">
+                    <span class="step-num">2</span>
+                    <div class="step-content">
+                        <h4>Pose Extraction</h4>
+                        <p>
+                            Runs YOLOv8 pose models on 15 fps downsampled video to extract all potential bounding boxes and keypoint (joints) estimation of players.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pipeline-step">
+                    <span class="step-num">3</span>
+                    <div class="step-content">
+                        <h4>Preprocessing & Feature Engineering</h4>
+                        <p>
+                            Filter out all bounding boxes with centroids not inside our court mask. Feature engineer limb lengths, joint velocity and acceleration from the pose keypoints.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pipeline-step">
+                    <span class="step-num">4</span>
+                    <div class="step-content">
+                        <h4>LSTM Inference</h4>
+                        <p>
+                            Create overlapping chunks of 20 seconds, feed into trained bidirectional LSTM, which outputs frame-by-frame probabilities of being in a point vs out of point.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pipeline-step">
+                    <span class="step-num">5</span>
+                    <div class="step-content">
+                        <h4>Output Generation</h4>
+                        <p>
+                            Average output signal, apply smoothing and hysteresis filtering to get discrete point start/end times. Write these "in-point" chunks to the output video.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Challenges -->
+        <section class="section" id="challenges">
+            <h2>Challenges</h2>
+            <p>
+                This project had some decently nontrivial challenges. The main ones I faced were finding a data modality with consistent signal, and creating a model that ran locally with very efficient computation.
+            </p>
+
+            <h3>Choosing the Right Data Modality</h3>
+            <p>
+                Firstly, I had to decide on a data modality to train my models on.
+            </p>
+            <p>
+                <strong>Raw video/images:</strong> Computationally infeasible. Training a video transformer or CNN to extract relevant features—even training on single frames without temporal convolutions—would require much more data than I could reasonably access.
+            </p>
+            <p>
+                <strong>Sound:</strong> Fails for multiple reasons: (1) Videos with multiple courts make it difficult to differentiate if the sound came from the relevant match. (2) Not all shots produce sound, not all players hit hard enough to make detectable sounds. (3) Sound can be noisy/inconsistent, or a recording may not even have sound.
+            </p>
+            <p>
+                <strong>Ball tracking:</strong> Doable, but can fail in occlusion cases or when the court and ball blend together—it can be very hard to see.
+            </p>
+            <p>
+                <strong>Player pose data:</strong> This is what I chose. A point being in play requires players to move and swing their rackets in distinct patterns. Players will almost certainly be visible in frame during points, providing consistent signal. And pose extraction is computationally cheap—the YOLOv8-pose models I use are 3.1M and 11.6M parameters, resulting in fast feature extraction.
+            </p>
+
+            <h3>Training Data</h3>
+            <p>
+                There are no publicly available datasets for this task. <strong>I manually annotated ~8 hours of match footage</strong> to train my first models on. I'm quite proud that I built a functioning model trained on such low amounts of data—proof that with clever engineering you can achieve similar results to brute-force big data approaches.
+            </p>
+
+            <h3>Known Limitations</h3>
+            <p>
+                If the court detection mask fails and there are more people on screen than the 2 players, the model could fail as the pose detector picks up wrong people, making output unreliable. This mainly occurs in low light conditions where classical CV methods fail to detect edges, or where the camera angle is poor.
+            </p>
+            <p>
+                The model could also fail to generalize to some videos, likely due to potential overfitting or insufficient representation of the distribution of match videos. As I collect more data, performance will improve.
+            </p>
+        </section>
+
+        <!-- Future -->
+        <section class="section" id="future">
+            <h2>Future Improvements</h2>
+            <ul class="future-list">
+                <li>
+                    <strong>Model distillation:</strong> The YOLO nano pose model is most computationally feasible but sacrifices accuracy compared to YOLO small. I plan to fine-tune the nano model on outputs of the YOLO large model to close this gap while keeping efficient computation.
+                </li>
+                <li>
+                    <strong>More data:</strong> Increase and augment training data using hand-labeled examples and model outputs to create more training data.
+                </li>
+                <li>
+                    <strong>Attention mechanisms:</strong> As data increases, switch to LSTM with attention, which can learn which parts of the 20s window are most relevant with respect to each other.
+                </li>
+                <li>
+                    <strong>Rally detection:</strong> Add a dedicated rally detection model. The current model doesn't perform as well on this because it has presumably learned that service or return motions are associated with point starts. I'll train a model with the same pipeline on rally data instead of match data.
+                </li>
+            </ul>
+            <p class="contribute-note">
+                If you have potential improvements, please PR them! I'm super open to feedback and help.
+            </p>
+        </section>
+
+        <!-- Installation -->
+        <section class="section" id="install">
+            <h2>Installation</h2>
+            <div class="requirements">
+                <p><strong>Requirements:</strong> Python 3.10+, 8GB+ RAM recommended, GPU optional (MPS/CUDA supported)</p>
+            </div>
+            <div class="code-block">
+                <pre><code><span class="comment"># Clone and install</span>
 git clone https://github.com/iroblesrazzaq/RallyVision.git
 cd RallyVision
 pip install .</code></pre>
-                </div>
-                <p class="install-note">
-                    <i class="fas fa-info-circle"></i>
-                    Models are included in the repo. YOLO weights auto-download on first run.
-                </p>
             </div>
-        </div>
-    </section>
+            <p class="install-note">
+                Models are included in the repo. YOLO weights auto-download on first run.
+            </p>
+        </section>
 
-    <!-- Usage Section -->
-    <section id="usage" class="usage">
-        <div class="section-header">
-            <span class="section-tag">Usage</span>
-            <h2>Two ways to <span class="gradient-text">use RallyVision</span></h2>
-        </div>
-        <div class="usage-tabs">
-            <button class="tab-btn active" data-tab="gui">
-                <i class="fas fa-window-maximize"></i>
-                GUI Mode
-            </button>
-            <button class="tab-btn" data-tab="cli">
-                <i class="fas fa-terminal"></i>
-                CLI Mode
-            </button>
-        </div>
-        <div class="usage-content">
-            <div class="tab-panel active" id="gui-panel">
-                <div class="usage-demo">
-                    <div class="demo-text">
-                        <h3>Browser-Based Interface</h3>
-                        <p>Launch the GUI with a single command. Drag and drop your video, adjust settings if needed, and download the result.</p>
-                        <div class="code-block code-block-inline">
-                            <code>rallyvision gui</code>
-                        </div>
-                        <ul class="demo-features">
-                            <li><i class="fas fa-check"></i> Drag & drop video upload</li>
-                            <li><i class="fas fa-check"></i> Real-time progress tracking</li>
-                            <li><i class="fas fa-check"></i> Advanced settings panel</li>
-                            <li><i class="fas fa-check"></i> Download results directly</li>
-                        </ul>
-                    </div>
-                </div>
+        <!-- Usage -->
+        <section class="section" id="usage">
+            <h2>Usage</h2>
+            
+            <h3>GUI Mode</h3>
+            <p>Launch the browser-based interface with a single command:</p>
+            <div class="code-block">
+                <pre><code>rallyvision gui</code></pre>
             </div>
-            <div class="tab-panel" id="cli-panel">
-                <div class="usage-demo">
-                    <div class="demo-text">
-                        <h3>Command Line Interface</h3>
-                        <p>Perfect for scripting, batch processing, or when you prefer the terminal.</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-lang">bash</span>
-                            </div>
-                            <pre><code><span class="code-comment"># Basic usage</span>
+            <p>Drag and drop your video, adjust settings if needed, and download the result. The GUI provides real-time progress tracking and advanced settings.</p>
+
+            <h3>CLI Mode</h3>
+            <div class="code-block">
+                <pre><code><span class="comment"># Basic usage — only video path required</span>
 rallyvision --video "match.mp4"
 
-<span class="code-comment"># With CSV output</span>
+<span class="comment"># With CSV output</span>
 rallyvision --video "match.mp4" --write-csv
 
-<span class="code-comment"># Custom output directory</span>
+<span class="comment"># Custom output directory</span>
 rallyvision --video "match.mp4" --output-dir "./processed"
 
-<span class="code-comment"># Use config file</span>
+<span class="comment"># Use config file for all options</span>
 rallyvision --config config.toml</code></pre>
-                        </div>
-                    </div>
-                </div>
             </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="cta">
-        <div class="cta-content">
-            <h2>Ready to get started?</h2>
-            <p>Join the open source community building better tennis analysis tools.</p>
-            <div class="cta-actions">
-                <a href="https://github.com/iroblesrazzaq/RallyVision" class="btn btn-primary btn-large" target="_blank">
-                    <i class="fab fa-github"></i>
-                    View on GitHub
-                </a>
-                <a href="https://github.com/iroblesrazzaq/RallyVision/issues" class="btn btn-ghost" target="_blank">
-                    <i class="fas fa-bug"></i>
-                    Report Issues
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-logo">
-                <span class="logo-icon">🎾</span>
-                <span class="logo-text">RallyVision</span>
-            </div>
-            <p class="footer-text">
-                Free and open source tennis match segmentation.
+            <p>
+                See the <a href="https://github.com/iroblesrazzaq/RallyVision#readme" target="_blank">README</a> for full CLI options and config file documentation.
             </p>
-            <div class="footer-links">
-                <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank">
-                    <i class="fab fa-github"></i>
-                </a>
-            </div>
-            <p class="footer-copy">© 2025 RallyVision. MIT License.</p>
-        </div>
-    </footer>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>
+                <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank">GitHub</a>
+                · 
+                <a href="https://github.com/iroblesrazzaq/RallyVision/issues" target="_blank">Issues</a>
+                ·
+                MIT License
+            </p>
+        </footer>
+    </main>
 
     <script src="script.js"></script>
 </body>
 </html>
-
