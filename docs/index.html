@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RallyVision - AI Tennis Point Detection</title>
+    <meta name="description" content="Free and open source AI-powered tool that extracts points from tennis match videos. CLI and GUI available.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <a href="#" class="nav-logo">
+                <span class="logo-icon">🎾</span>
+                <span class="logo-text">RallyVision</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#install">Install</a>
+                <a href="#usage">Usage</a>
+                <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank" class="nav-github">
+                    <i class="fab fa-github"></i>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                Open Source & Free
+            </div>
+            <h1 class="hero-title">
+                AI-Powered<br>
+                <span class="gradient-text">Tennis Point</span><br>
+                Detection
+            </h1>
+            <p class="hero-subtitle">
+                Drop in a full tennis match video. Get a segmented video with only the rallies.<br>
+                No cloud processing. Runs entirely on your machine.
+            </p>
+            <div class="hero-actions">
+                <a href="https://github.com/iroblesrazzaq/RallyVision" class="btn btn-primary" target="_blank">
+                    <i class="fab fa-github"></i>
+                    Get Started
+                </a>
+                <a href="#features" class="btn btn-ghost">
+                    Learn More
+                    <i class="fas fa-arrow-down"></i>
+                </a>
+            </div>
+            <div class="hero-tech">
+                <span class="tech-tag">PyTorch</span>
+                <span class="tech-tag">YOLOv8</span>
+                <span class="tech-tag">LSTM</span>
+                <span class="tech-tag">OpenCV</span>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="court-container">
+                <div class="court">
+                    <div class="court-line court-line-h"></div>
+                    <div class="court-line court-line-v"></div>
+                    <div class="court-line court-line-service-t"></div>
+                    <div class="court-line court-line-service-b"></div>
+                    <div class="court-net"></div>
+                    <div class="ball ball-1"></div>
+                    <div class="ball ball-2"></div>
+                    <div class="ball ball-3"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="section-header">
+            <span class="section-tag">Features</span>
+            <h2>Everything you need to<br><span class="gradient-text">segment tennis matches</span></h2>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-running"></i>
+                </div>
+                <h3>Pose Detection</h3>
+                <p>Uses YOLOv8 pose estimation to track player movements and keypoints throughout the match.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h3>LSTM Analysis</h3>
+                <p>Deep learning model analyzes temporal patterns to identify when points are being played.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-cut"></i>
+                </div>
+                <h3>Smart Segmentation</h3>
+                <p>Automatically cuts out dead time between points, keeping only the action.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-table"></i>
+                </div>
+                <h3>CSV Export</h3>
+                <p>Optionally export point timestamps to CSV for further analysis or visualization.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-desktop"></i>
+                </div>
+                <h3>GUI & CLI</h3>
+                <p>Use the browser-based interface for simplicity, or the CLI for scripting and automation.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3>100% Local</h3>
+                <p>All processing happens on your machine. No data leaves your computer.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pipeline Section -->
+    <section class="pipeline">
+        <div class="section-header">
+            <span class="section-tag">How It Works</span>
+            <h2>The processing <span class="gradient-text">pipeline</span></h2>
+        </div>
+        <div class="pipeline-steps">
+            <div class="pipeline-step">
+                <div class="step-number">01</div>
+                <div class="step-content">
+                    <h4>Pose Extraction</h4>
+                    <p>YOLOv8 detects and tracks player poses frame by frame</p>
+                </div>
+            </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-step">
+                <div class="step-number">02</div>
+                <div class="step-content">
+                    <h4>Feature Engineering</h4>
+                    <p>Extract motion features and normalize keypoint positions</p>
+                </div>
+            </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-step">
+                <div class="step-number">03</div>
+                <div class="step-content">
+                    <h4>LSTM Inference</h4>
+                    <p>Neural network predicts play/no-play probability per frame</p>
+                </div>
+            </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-step">
+                <div class="step-number">04</div>
+                <div class="step-content">
+                    <h4>Video Output</h4>
+                    <p>Segments combined into final video with only rallies</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Install Section -->
+    <section id="install" class="install">
+        <div class="section-header">
+            <span class="section-tag">Installation</span>
+            <h2>Get up and running<br><span class="gradient-text">in minutes</span></h2>
+        </div>
+        <div class="install-content">
+            <div class="install-requirements">
+                <h3>Requirements</h3>
+                <ul>
+                    <li><i class="fab fa-python"></i> Python 3.10+</li>
+                    <li><i class="fas fa-memory"></i> 8GB+ RAM recommended</li>
+                    <li><i class="fas fa-microchip"></i> GPU optional (MPS/CUDA supported)</li>
+                </ul>
+            </div>
+            <div class="install-steps">
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" data-code="git clone https://github.com/iroblesrazzaq/RallyVision.git
+cd RallyVision
+pip install .">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <pre><code><span class="code-comment"># Clone and install</span>
+git clone https://github.com/iroblesrazzaq/RallyVision.git
+cd RallyVision
+pip install .</code></pre>
+                </div>
+                <p class="install-note">
+                    <i class="fas fa-info-circle"></i>
+                    Models are included in the repo. YOLO weights auto-download on first run.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Usage Section -->
+    <section id="usage" class="usage">
+        <div class="section-header">
+            <span class="section-tag">Usage</span>
+            <h2>Two ways to <span class="gradient-text">use RallyVision</span></h2>
+        </div>
+        <div class="usage-tabs">
+            <button class="tab-btn active" data-tab="gui">
+                <i class="fas fa-window-maximize"></i>
+                GUI Mode
+            </button>
+            <button class="tab-btn" data-tab="cli">
+                <i class="fas fa-terminal"></i>
+                CLI Mode
+            </button>
+        </div>
+        <div class="usage-content">
+            <div class="tab-panel active" id="gui-panel">
+                <div class="usage-demo">
+                    <div class="demo-text">
+                        <h3>Browser-Based Interface</h3>
+                        <p>Launch the GUI with a single command. Drag and drop your video, adjust settings if needed, and download the result.</p>
+                        <div class="code-block code-block-inline">
+                            <code>rallyvision gui</code>
+                        </div>
+                        <ul class="demo-features">
+                            <li><i class="fas fa-check"></i> Drag & drop video upload</li>
+                            <li><i class="fas fa-check"></i> Real-time progress tracking</li>
+                            <li><i class="fas fa-check"></i> Advanced settings panel</li>
+                            <li><i class="fas fa-check"></i> Download results directly</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-panel" id="cli-panel">
+                <div class="usage-demo">
+                    <div class="demo-text">
+                        <h3>Command Line Interface</h3>
+                        <p>Perfect for scripting, batch processing, or when you prefer the terminal.</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-lang">bash</span>
+                            </div>
+                            <pre><code><span class="code-comment"># Basic usage</span>
+rallyvision --video "match.mp4"
+
+<span class="code-comment"># With CSV output</span>
+rallyvision --video "match.mp4" --write-csv
+
+<span class="code-comment"># Custom output directory</span>
+rallyvision --video "match.mp4" --output-dir "./processed"
+
+<span class="code-comment"># Use config file</span>
+rallyvision --config config.toml</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="cta-content">
+            <h2>Ready to get started?</h2>
+            <p>Join the open source community building better tennis analysis tools.</p>
+            <div class="cta-actions">
+                <a href="https://github.com/iroblesrazzaq/RallyVision" class="btn btn-primary btn-large" target="_blank">
+                    <i class="fab fa-github"></i>
+                    View on GitHub
+                </a>
+                <a href="https://github.com/iroblesrazzaq/RallyVision/issues" class="btn btn-ghost" target="_blank">
+                    <i class="fas fa-bug"></i>
+                    Report Issues
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <span class="logo-icon">🎾</span>
+                <span class="logo-text">RallyVision</span>
+            </div>
+            <p class="footer-text">
+                Free and open source tennis match segmentation.
+            </p>
+            <div class="footer-links">
+                <a href="https://github.com/iroblesrazzaq/RallyVision" target="_blank">
+                    <i class="fab fa-github"></i>
+                </a>
+            </div>
+            <p class="footer-copy">© 2025 RallyVision. MIT License.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
