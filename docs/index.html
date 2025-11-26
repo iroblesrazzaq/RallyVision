@@ -16,8 +16,10 @@
     <div class="page">
         <header class="header">
             <p class="byline">A project by <strong>Ismael Robles-Razzaq</strong></p>
-            <img src="rallyclip_logo_cropped.png" alt="RallyClip logo" class="header-logo">
-            <h1>RallyClip</h1>
+            <div class="logo-title-group">
+                <img src="rallyclip_logo_cropped.png" alt="RallyClip logo" class="header-logo">
+                <h1>RallyClip</h1>
+            </div>
             <p class="tagline">Free, open-source tennis match segmentation.<br>Runs entirely on your machine.</p>
             <a href="https://github.com/iroblesrazzaq/RallyClip" class="github-link" target="_blank">GitHub ↗</a>
         </header>
@@ -173,5 +175,30 @@ rallyclip --config config.toml</code></pre>
             <span>GPL-3.0 License</span>
         </footer>
     </div>
+
+    <script>
+        (function () {
+            const group = document.querySelector('.logo-title-group');
+            const title = group?.querySelector('h1');
+
+            if (!group || !title) return;
+
+            const syncLogoWidth = () => {
+                const width = title.getBoundingClientRect().width;
+
+                if (width > 0) {
+                    group.style.setProperty('--logo-width', `${width}px`);
+                }
+            };
+
+            if (window.ResizeObserver) {
+                const observer = new ResizeObserver(syncLogoWidth);
+                observer.observe(title);
+            }
+
+            window.addEventListener('resize', syncLogoWidth);
+            syncLogoWidth();
+        })();
+    </script>
 </body>
 </html>
