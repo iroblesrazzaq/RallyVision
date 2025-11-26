@@ -191,13 +191,27 @@ rallyclip --config config.toml</code></pre>
                 }
             };
 
-            if (window.ResizeObserver) {
-                const observer = new ResizeObserver(syncLogoWidth);
-                observer.observe(title);
-            }
+            const setupObservers = () => {
+                if (window.ResizeObserver) {
+                    const observer = new ResizeObserver(syncLogoWidth);
+                    observer.observe(title);
+                }
 
-            window.addEventListener('resize', syncLogoWidth);
-            syncLogoWidth();
+                window.addEventListener('resize', syncLogoWidth);
+            };
+
+            const init = () => {
+                syncLogoWidth();
+                setupObservers();
+            };
+
+            if (document.fonts?.ready) {
+                document.fonts.ready.then(init);
+            } else if (document.readyState === 'complete') {
+                init();
+            } else {
+                window.addEventListener('load', init, { once: true });
+            }
         })();
     </script>
 </body>
