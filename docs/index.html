@@ -135,9 +135,23 @@
             <section id="install">
                 <h2>Installation</h2>
                 <p class="requirements">Requires Python 3.10+. 8GB+ RAM recommended. GPU optional (MPS/CUDA supported).</p>
-<pre><code><span class="comment"># Clone and install</span>
+                
+                <h3>Using UV (recommended)</h3>
+                <p><a href="https://docs.astral.sh/uv/" target="_blank">UV</a> is a fast Python package manager. Install it with <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></p>
+<pre><code><span class="comment"># Clone and install with UV</span>
 git clone https://github.com/iroblesrazzaq/RallyClip.git
 cd RallyClip
+uv sync
+
+<span class="comment"># Run with UV</span>
+uv run rallyclip gui
+uv run rallyclip --video "match.mp4"</code></pre>
+
+                <h3>Using pip</h3>
+<pre><code><span class="comment"># Clone and install with pip</span>
+git clone https://github.com/iroblesrazzaq/RallyClip.git
+cd RallyClip
+python -m venv .venv && source .venv/bin/activate
 pip install .</code></pre>
                 <p class="caption">Models are included in the repo. YOLO weights auto-download on first run.</p>
             </section>
@@ -145,10 +159,12 @@ pip install .</code></pre>
             <!-- Usage -->
             <section id="usage">
                 <h2>Usage</h2>
+                <p class="caption">If installed with UV, prefix commands with <code>uv run</code>. If installed with pip, run directly after activating your venv.</p>
                 
                 <h3>GUI</h3>
                 <p>Launch the browser-based interface:</p>
-<pre><code>rallyclip gui</code></pre>
+<pre><code>rallyclip gui          <span class="comment"># pip install</span>
+uv run rallyclip gui   <span class="comment"># uv sync</span></code></pre>
                 <p>Drag and drop your video, adjust settings if needed, and download the result. The GUI provides real-time progress tracking and advanced settings.</p>
                 
                 <h3>CLI</h3>

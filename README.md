@@ -4,19 +4,37 @@ CLI and GUI tool that extracts points from full tennis match video and outputs a
 
 ## Prereqs
 - Python 3.10-3.11
-- A clean virtual environment is recommended (`python -m venv .venv && source .venv/bin/activate` or conda equivalent).
+- A clean virtual environment is recommended
 
 ## Install
+
+### Option A: Using UV (recommended)
+[UV](https://docs.astral.sh/uv/) is a fast Python package manager. If you don't have it, install with `curl -LsSf https://astral.sh/uv/install.sh | sh`.
+
 ```bash
 git clone https://github.com/iroblesrazzaq/RallyClip.git
 cd RallyClip
+uv sync
+```
+
+Run commands with `uv run`:
+```bash
+uv run rallyclip --video "match.mp4"
+uv run rallyclip gui
+```
+
+### Option B: Using pip
+```bash
+git clone https://github.com/iroblesrazzaq/RallyClip.git
+cd RallyClip
+python -m venv .venv && source .venv/bin/activate  # or conda equivalent
 pip install .
 ```
 
 Models: ensure `models/` contains `lstm_300_v0.1.pth` and `scaler_300_v0.1.joblib` (see `models/README.md`). YOLO weights auto-download into `models/`.
 
 ## GUI (local)
-- Run: `rallyclip gui` (auto-picks a free localhost port, opens your browser). `Ctrl-C` to quit.
+- Run: `rallyclip gui` (or `uv run rallyclip gui` if using UV). Auto-picks a free localhost port, opens your browser. `Ctrl-C` to quit.
 - For request logs, use `RALLYCLIP_GUI_VERBOSE=1 rallyclip gui`.
 - Drag/drop an MP4 (recommended ≥1080p, 720p minimum). Outputs live under `~/RallyClipJobs/<job_id>` and are downloadable from the UI.
 - Advanced settings mirror `config.toml` (write CSV, thresholds, YOLO size/device, min duration, start/duration); defaults are pre-filled and should usually be left unchanged.
@@ -25,6 +43,8 @@ Models: ensure `models/` contains `lstm_300_v0.1.pth` and `scaler_300_v0.1.jobli
 Only the video path is required; outputs default to `./output_videos` and CSV is off by default.
 ```bash
 rallyclip --video "raw_videos/your_match.mp4"
+# or with UV:
+uv run rallyclip --video "raw_videos/your_match.mp4"
 ```
 - Segmented video: `output_videos/<video_stem>_segmented.mp4`
 - CSV (if enabled): `output_csvs/<video_stem>_segments.csv` or the video’s directory
