@@ -9,9 +9,13 @@ CLI and GUI tool that extracts points from full tennis match video and outputs a
 ## Install
 
 ### Option A: Using UV (recommended)
-[UV](https://docs.astral.sh/uv/) is a fast Python package manager. If you don't have it, install with `curl -LsSf https://astral.sh/uv/install.sh | sh`.
+[UV](https://docs.astral.sh/uv/) is a fast Python package manager.
 
 ```bash
+# Install UV (if you don't have it)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Clone and install
 git clone https://github.com/iroblesrazzaq/RallyClip.git
 cd RallyClip
 uv sync

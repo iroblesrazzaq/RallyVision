@@ -137,8 +137,11 @@
                 <p class="requirements">Requires Python 3.10+. 8GB+ RAM recommended. GPU optional (MPS/CUDA supported).</p>
                 
                 <h3>Using UV (recommended)</h3>
-                <p><a href="https://docs.astral.sh/uv/" target="_blank">UV</a> is a fast Python package manager. Install it with <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></p>
-<pre><code><span class="comment"># Clone and install with UV</span>
+                <p><a href="https://docs.astral.sh/uv/" target="_blank">UV</a> is a fast Python package manager.</p>
+<pre><code><span class="comment"># Install UV (if you don't have it)</span>
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+<span class="comment"># Clone and install</span>
 git clone https://github.com/iroblesrazzaq/RallyClip.git
 cd RallyClip
 uv sync
