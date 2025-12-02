@@ -26,7 +26,7 @@ import joblib
 import numpy as np
 import av
 
-from cli.main import YOLO_SIZE_MAP, _candidate_roots, _resolve_asset
+from cli.main import YOLO_SIZE_MAP, _candidate_roots, _resolve_asset, _is_frozen, _get_bundle_dir, _user_data_dir
 from extraction.pose_extractor import PoseExtractionCancelled, PoseExtractor
 from features.feature_engineer import FeatureEngineer
 from infer import (
@@ -44,7 +44,13 @@ JobDict = Dict[str, Any]
 
 
 def _find_static_dir() -> Path:
-    """Locate the frontend bundle relative to common repo roots."""
+    """Locate the frontend bundle relative to common repo roots or PyInstaller bundle."""
+    # When frozen, look in the bundle first
+    if _is_frozen():
+        bundle_frontend = _get_bundle_dir() / "apps/gui/frontend"
+        if bundle_frontend.exists():
+            return bundle_frontend.resolve()
+    
     rel = Path("apps/gui/frontend")
     for root in _candidate_roots():
         candidate = Path(root) / rel
@@ -57,28 +63,18 @@ STATIC_DIR = _find_static_dir()
 
 
 def _default_jobs_dir() -> Path:
-    """Pick a jobs/output root inside the RallyClip install if possible; fallback to CWD."""
-    for root in _candidate_roots():
-        root_path = Path(root).resolve()
-        if (root_path / "models").exists() or (root_path / "apps").exists():
-            return (root_path / "RallyClipJobs").resolve()
-    return (Path.cwd() / "RallyClipJobs").resolve()
+    """Pick a jobs/output root - user directory when frozen, repo when in dev."""
+    return (_user_data_dir() / "RallyClipJobs").resolve()
 
 
 def _default_output_dir() -> Path:
-    for root in _candidate_roots():
-        root_path = Path(root).resolve()
-        if (root_path / "models").exists() or (root_path / "apps").exists():
-            return (root_path / "output_videos").resolve()
-    return (Path.cwd() / "output_videos").resolve()
+    """Output directory for segmented videos."""
+    return (_user_data_dir() / "output_videos").resolve()
 
 
 def _default_csv_dir() -> Path:
-    for root in _candidate_roots():
-        root_path = Path(root).resolve()
-        if (root_path / "models").exists() or (root_path / "apps").exists():
-            return (root_path / "output_csvs").resolve()
-    return (Path.cwd() / "output_csvs").resolve()
+    """Output directory for segment CSV files."""
+    return (_user_data_dir() / "output_csvs").resolve()
 
 
 def _keep_jobs() -> bool:
@@ -581,6 +577,17 @@ def download_csv(job_id: str):
     if not csv_path or not os.path.exists(csv_path):
         return jsonify({"error": "CSV not available"}), 404
     return send_file(csv_path, as_attachment=True, download_name=f"{job_id}_segments.csv")
+
+
+@app.route("/api/shutdown", methods=["POST"])
+def shutdown():
+    """Gracefully shutdown the server when the browser tab is closed."""
+    def shutdown_server():
+        time.sleep(0.5)  # Small delay to allow response to be sent
+        os._exit(0)
+    
+    threading.Thread(target=shutdown_server, daemon=True).start()
+    return jsonify({"status": "shutting_down"}), 200
 
 
 def launch(port: Optional[int] = None) -> int:

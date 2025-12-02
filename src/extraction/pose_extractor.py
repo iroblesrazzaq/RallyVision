@@ -1,6 +1,8 @@
 import os
 import subprocess
+import sys
 import time
+from pathlib import Path
 from typing import Callable, Optional
 import numpy as np
 import av
@@ -9,6 +11,22 @@ from ultralytics.utils import SETTINGS
 import torch
 from tqdm import tqdm
 import logging
+
+
+def _is_frozen() -> bool:
+    """Check if running inside a PyInstaller bundle."""
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+
+def _pose_data_root() -> Path:
+    """Return the root directory for pose data output.
+    
+    When running as a frozen app, returns ~/RallyClip/pose_data.
+    Otherwise returns the current working directory's pose_data.
+    """
+    if _is_frozen():
+        return Path.home() / "RallyClip" / "pose_data"
+    return Path.cwd() / "pose_data"
 
 
 
@@ -22,7 +40,7 @@ class PoseExtractor:
     and saves compressed npz artifacts. Designed for reuse by CLI and GUI.
     """
 
-    def __init__(self, model_dir: Optional[str] = None, model_path: str = "yolov8s-pose.pt") -> None:
+    def __init__(self, model_dir: Optional[str] = None, model_path: str = "yolov8n-pose.pt") -> None:
         # Set early so downstream checks can use it
         self.model_path = model_path
         self.model_dir = model_dir
@@ -281,16 +299,16 @@ class PoseExtractor:
 
         _flush_batch()
 
-        # output path
+        # output path - use user-writable directory when frozen
         if "yolov8" in self.model_path:
             model_size = self.model_path.split("yolov8")[1].split("-")[0]
         else:
             model_size = "s"
         subdir_name = f"yolo{model_size}_{confidence_threshold}conf_{target_fps}fps_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s"
-        output_dir = os.path.join("pose_data", "raw", subdir_name)
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir = _pose_data_root() / "raw" / subdir_name
+        output_dir.mkdir(parents=True, exist_ok=True)
         base_name = os.path.splitext(os.path.basename(video_path))[0]
         output_filename = f"{base_name}_posedata_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s_yolo{model_size}.npz"
-        output_path = os.path.join(output_dir, output_filename)
-        np.savez_compressed(output_path, frames=all_frames_data)
-        return output_path
+        output_path = output_dir / output_filename
+        np.savez_compressed(str(output_path), frames=all_frames_data)
+        return str(output_path)
