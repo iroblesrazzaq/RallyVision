@@ -61,15 +61,36 @@ class RunConfig:
     duration: int = 999999
 
 
+def _is_frozen() -> bool:
+    """Check if running inside a PyInstaller bundle."""
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+
+def _get_bundle_dir() -> Path:
+    """Get the PyInstaller bundle directory (_MEIPASS) if frozen."""
+    return Path(getattr(sys, '_MEIPASS', ''))
+
+
 def _candidate_roots() -> list[Path]:
-    """Possible roots where assets might live (repo root, cwd, site-packages)."""
+    """Possible roots where assets might live (repo root, cwd, site-packages, or bundle)."""
+    roots: list[Path] = []
+    
+    # If running frozen (PyInstaller), prioritize the bundle directory
+    if _is_frozen():
+        roots.append(_get_bundle_dir())
+    
+    # Current working directory
+    roots.append(Path.cwd())
+    
+    # Walk up from __file__ location
     here = Path(__file__).resolve()
-    roots = [Path.cwd()]
     for depth in (2, 3, 4):
         try:
             roots.append(here.parents[depth])
         except IndexError:
             continue
+    
+    # Deduplicate while preserving order
     seen: list[Path] = []
     for r in roots:
         if r not in seen:

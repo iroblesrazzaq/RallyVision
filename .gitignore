@@ -1,6 +1,7 @@
 dist/
 build/
 *.spec
+!apps/gui/RallyClip.spec
 
 # generated data and outputs
 raw_videos/

@@ -616,4 +616,23 @@ class RallyClip {
 
 document.addEventListener('DOMContentLoaded', () => {
     new RallyClip();
+    
+    // Shutdown server when browser tab/window is closed (for desktop app mode)
+    // Use both beforeunload and unload for maximum reliability
+    const triggerShutdown = () => {
+        // sendBeacon is the most reliable way to send data during page unload
+        const data = new Blob(['{}'], { type: 'application/json' });
+        navigator.sendBeacon('/api/shutdown', data);
+    };
+    
+    window.addEventListener('beforeunload', triggerShutdown);
+    window.addEventListener('unload', triggerShutdown);
+    
+    // Also handle page visibility change to hidden (catches some edge cases)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            // Only shutdown if the page is being unloaded, not just hidden
+            // We use a flag that gets set during unload
+        }
+    });
 });
