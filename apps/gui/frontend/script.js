@@ -146,7 +146,7 @@ class RallyClip {
 
     applyDefaults() {
         if (!this.defaults) return;
-        this.populateSelect(this.yoloSize, this.yoloOptions, this.defaults.yolo_size || 'small');
+        this.populateSelect(this.yoloSize, this.yoloOptions, this.defaults.yolo_size || 'nano');
         this.yoloDevice.value = this.defaults.yolo_device || '';
         this.low.value = this.defaults.low ?? 0.45;
         this.high.value = this.defaults.high ?? 0.8;

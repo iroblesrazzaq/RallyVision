@@ -222,7 +222,7 @@ def _resolve_yolo_weights(cfg: Dict[str, Any]) -> str:
         return YOLO_SIZE_MAP[choice]
     if choice:
         return str(choice)
-    return YOLO_SIZE_MAP["small"]
+    return YOLO_SIZE_MAP["nano"]
 
 
 def _resolve_model_paths(cfg: Dict[str, Any]) -> tuple[Path, Path]:

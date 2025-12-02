@@ -11,7 +11,7 @@ write_csv = true
 segment_video = true
 csv_output_dir = "output_csvs" # defaults to input video directory
 
-# YOLO pose model choice: nano | small | medium | large
+# YOLO pose model choice: nano | small | medium | large —- larger than small is not worth it
 yolo_model = "nano"
 # Optional device: cpu | cuda | mps (defaults to auto; set to "mps" for Apple Silicon)
 yolo_device = "mps" # get mps warning so switches to cpu if don't set this var

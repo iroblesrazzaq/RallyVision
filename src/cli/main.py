@@ -148,7 +148,7 @@ def build_run_config(args: argparse.Namespace) -> RunConfig:
     elif yolo_choice:
         yolo_weights = str(yolo_choice)
     else:
-        yolo_weights = YOLO_SIZE_MAP["small"]
+        yolo_weights = YOLO_SIZE_MAP["nano"]
     yolo_device = args.yolo_device or cfg("yolo_device")
 
     write_csv = _pick_bool(args.write_csv, cfg("write_csv"), False)
