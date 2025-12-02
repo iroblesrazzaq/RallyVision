@@ -61,52 +61,15 @@ class RunConfig:
     duration: int = 999999
 
 
-def _is_frozen() -> bool:
-    """Check if running inside a PyInstaller bundle."""
-    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
-
-
-def _get_bundle_dir() -> Path:
-    """Get the PyInstaller bundle directory (_MEIPASS) if frozen."""
-    return Path(getattr(sys, '_MEIPASS', ''))
-
-
-def _user_data_dir() -> Path:
-    """Return a user-writable directory for RallyClip data.
-    
-    When running as a frozen app, returns ~/RallyClip.
-    Otherwise returns the repo root or CWD.
-    """
-    if _is_frozen():
-        return Path.home() / "RallyClip"
-    # In dev mode, find the repo root
-    for root in _candidate_roots():
-        root_path = Path(root).resolve()
-        if (root_path / "models").exists() or (root_path / "apps").exists():
-            return root_path
-    return Path.cwd()
-
-
 def _candidate_roots() -> list[Path]:
-    """Possible roots where assets might live (repo root, cwd, site-packages, or bundle)."""
-    roots: list[Path] = []
-    
-    # If running frozen (PyInstaller), prioritize the bundle directory
-    if _is_frozen():
-        roots.append(_get_bundle_dir())
-    
-    # Current working directory
-    roots.append(Path.cwd())
-    
-    # Walk up from __file__ location
+    """Possible roots where assets might live (repo root, cwd, site-packages)."""
     here = Path(__file__).resolve()
+    roots = [Path.cwd()]
     for depth in (2, 3, 4):
         try:
             roots.append(here.parents[depth])
         except IndexError:
             continue
-    
-    # Deduplicate while preserving order
     seen: list[Path] = []
     for r in roots:
         if r not in seen:

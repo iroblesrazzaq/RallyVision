@@ -26,7 +26,7 @@ import joblib
 import numpy as np
 import av
 
-from cli.main import YOLO_SIZE_MAP, _candidate_roots, _resolve_asset, _is_frozen, _get_bundle_dir, _user_data_dir
+from cli.main import YOLO_SIZE_MAP, _candidate_roots, _resolve_asset
 from extraction.pose_extractor import PoseExtractionCancelled, PoseExtractor
 from features.feature_engineer import FeatureEngineer
 from infer import (
@@ -44,13 +44,7 @@ JobDict = Dict[str, Any]
 
 
 def _find_static_dir() -> Path:
-    """Locate the frontend bundle relative to common repo roots or PyInstaller bundle."""
-    # When frozen, look in the bundle first
-    if _is_frozen():
-        bundle_frontend = _get_bundle_dir() / "apps/gui/frontend"
-        if bundle_frontend.exists():
-            return bundle_frontend.resolve()
-    
+    """Locate the frontend bundle relative to common repo roots."""
     rel = Path("apps/gui/frontend")
     for root in _candidate_roots():
         candidate = Path(root) / rel
@@ -63,18 +57,28 @@ STATIC_DIR = _find_static_dir()
 
 
 def _default_jobs_dir() -> Path:
-    """Pick a jobs/output root - user directory when frozen, repo when in dev."""
-    return (_user_data_dir() / "RallyClipJobs").resolve()
+    """Pick a jobs/output root inside the RallyClip install if possible; fallback to CWD."""
+    for root in _candidate_roots():
+        root_path = Path(root).resolve()
+        if (root_path / "models").exists() or (root_path / "apps").exists():
+            return (root_path / "RallyClipJobs").resolve()
+    return (Path.cwd() / "RallyClipJobs").resolve()
 
 
 def _default_output_dir() -> Path:
-    """Output directory for segmented videos."""
-    return (_user_data_dir() / "output_videos").resolve()
+    for root in _candidate_roots():
+        root_path = Path(root).resolve()
+        if (root_path / "models").exists() or (root_path / "apps").exists():
+            return (root_path / "output_videos").resolve()
+    return (Path.cwd() / "output_videos").resolve()
 
 
 def _default_csv_dir() -> Path:
-    """Output directory for segment CSV files."""
-    return (_user_data_dir() / "output_csvs").resolve()
+    for root in _candidate_roots():
+        root_path = Path(root).resolve()
+        if (root_path / "models").exists() or (root_path / "apps").exists():
+            return (root_path / "output_csvs").resolve()
+    return (Path.cwd() / "output_csvs").resolve()
 
 
 def _keep_jobs() -> bool:
@@ -579,36 +583,23 @@ def download_csv(job_id: str):
     return send_file(csv_path, as_attachment=True, download_name=f"{job_id}_segments.csv")
 
 
-@app.route("/api/shutdown", methods=["POST"])
-def shutdown():
-    """Gracefully shutdown the server when the browser tab is closed (browser fallback mode)."""
-    def shutdown_server():
-        time.sleep(0.5)  # Small delay to allow response to be sent
-        os._exit(0)
-    
-    threading.Thread(target=shutdown_server, daemon=True).start()
-    return jsonify({"status": "shutting_down"}), 200
-
-
-def _setup_logging() -> bool:
-    """Configure logging and return whether verbose mode is enabled."""
+def launch(port: Optional[int] = None) -> int:
     verbose = os.environ.get("RALLYCLIP_GUI_VERBOSE", "").strip().lower() in {"1", "true", "yes"}
     log_level = logging.INFO if verbose else logging.ERROR
     logging.basicConfig(level=log_level, format="%(asctime)s [%(levelname)s] %(message)s")
+    # Quiet Flask/werkzeug unless verbose
     for name in ("werkzeug", "flask.app"):
         logging.getLogger(name).setLevel(log_level)
     if not verbose:
+        # Disable tqdm bars in GUI mode to keep the terminal clean
         os.environ.setdefault("RALLYCLIP_NO_TQDM", "1")
+        # Suppress the Flask devserver banner
         try:
             import flask.cli  # type: ignore
             flask.cli.show_server_banner = lambda *args, **kwargs: None  # noqa: E731
         except Exception:
             pass
-    return verbose
-
-
-def _get_preferred_ports(port: Optional[int] = None) -> list[int]:
-    """Build list of preferred ports to try."""
+    _sweep_old_jobs()
     preferred_ports: list[int] = []
     env_port = os.environ.get("RALLYCLIP_GUI_PORT")
     if port:
@@ -619,65 +610,14 @@ def _get_preferred_ports(port: Optional[int] = None) -> list[int]:
         except ValueError:
             pass
     preferred_ports.extend([8000, 5173])
-    return preferred_ports
-
-
-def _launch_browser_mode(port: Optional[int] = None) -> int:
-    """Fallback: open in browser (original behavior for dev/testing)."""
-    _setup_logging()
-    _sweep_old_jobs()
-    preferred_ports = _get_preferred_ports(port)
     chosen_port = _pick_port(preferred_ports)
     threading.Thread(target=_safe_open_browser, args=(chosen_port,), daemon=True).start()
-    app.logger.info("Starting GUI on http://127.0.0.1:%s (browser mode)", chosen_port)
+    app.logger.info("Starting GUI on http://127.0.0.1:%s", chosen_port)
     try:
         app.run(host="127.0.0.1", port=chosen_port, debug=False, use_reloader=False, threaded=True)
     except Exception:  # pragma: no cover - runtime safety
         app.logger.exception("GUI server crashed")
         return 1
-    return 0
-
-
-def launch(port: Optional[int] = None) -> int:
-    """Launch the RallyClip GUI.
-    
-    Uses pywebview for a native window experience when available.
-    Falls back to opening in system browser for dev/testing.
-    """
-    # Try to import pywebview for native window
-    try:
-        import webview
-    except ImportError:
-        # Fallback to browser mode if pywebview not installed
-        return _launch_browser_mode(port)
-    
-    _setup_logging()
-    _sweep_old_jobs()
-    
-    preferred_ports = _get_preferred_ports(port)
-    chosen_port = _pick_port(preferred_ports)
-    
-    # Start Flask in background daemon thread
-    def run_flask():
-        app.run(host="127.0.0.1", port=chosen_port, debug=False, use_reloader=False, threaded=True)
-    
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    
-    # Give Flask a moment to start
-    time.sleep(0.5)
-    
-    # Create native window - this blocks until window is closed
-    window = webview.create_window(
-        'RallyClip',
-        f'http://127.0.0.1:{chosen_port}/',
-        width=1200,
-        height=800,
-        min_size=(900, 600),
-    )
-    webview.start()
-    
-    # Window closed - process exits cleanly
     return 0
 
 
