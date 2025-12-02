@@ -344,6 +344,7 @@ def _run_pipeline(job_id: str) -> None:
             target_fps=int(cfg["fps"]),
             annotations_csv=None,
             progress_callback=pose_progress,
+            output_base_dir=str(job_dir),
         )
         job["paths"]["raw_npz"] = raw_npz
         _set_step(job, "pose", "completed", 100)

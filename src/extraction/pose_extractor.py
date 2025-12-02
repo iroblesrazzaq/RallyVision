@@ -120,6 +120,7 @@ class PoseExtractor:
         target_fps: int = 15,
         annotations_csv: Optional[str] = None,
         progress_callback: Optional[Callable[[float], None]] = None,
+        output_base_dir: Optional[str] = None,
     ) -> str:
         import csv
 
@@ -287,7 +288,11 @@ class PoseExtractor:
         else:
             model_size = "s"
         subdir_name = f"yolo{model_size}_{confidence_threshold}conf_{target_fps}fps_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s"
-        output_dir = os.path.join("pose_data", "raw", subdir_name)
+        # Use provided output_base_dir if available, otherwise fall back to relative path
+        if output_base_dir:
+            output_dir = os.path.join(output_base_dir, subdir_name)
+        else:
+            output_dir = os.path.join("pose_data", "raw", subdir_name)
         os.makedirs(output_dir, exist_ok=True)
         base_name = os.path.splitext(os.path.basename(video_path))[0]
         output_filename = f"{base_name}_posedata_{start_time_seconds}s_to_{start_time_seconds + duration_seconds}s_yolo{model_size}.npz"
