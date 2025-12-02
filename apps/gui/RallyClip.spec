@@ -51,6 +51,14 @@ hiddenimports += [
     'PIL.Image',
 ]
 
+# pywebview for native window (macOS uses WebKit/Cocoa)
+hiddenimports += collect_submodules('webview')
+hiddenimports += [
+    'webview',
+    'webview.platforms',
+    'webview.platforms.cocoa',
+]
+
 # Collect data files
 datas = []
 

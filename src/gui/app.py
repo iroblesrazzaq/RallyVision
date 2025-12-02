@@ -581,7 +581,7 @@ def download_csv(job_id: str):
 
 @app.route("/api/shutdown", methods=["POST"])
 def shutdown():
-    """Gracefully shutdown the server when the browser tab is closed."""
+    """Gracefully shutdown the server when the browser tab is closed (browser fallback mode)."""
     def shutdown_server():
         time.sleep(0.5)  # Small delay to allow response to be sent
         os._exit(0)
@@ -590,23 +590,25 @@ def shutdown():
     return jsonify({"status": "shutting_down"}), 200
 
 
-def launch(port: Optional[int] = None) -> int:
+def _setup_logging() -> bool:
+    """Configure logging and return whether verbose mode is enabled."""
     verbose = os.environ.get("RALLYCLIP_GUI_VERBOSE", "").strip().lower() in {"1", "true", "yes"}
     log_level = logging.INFO if verbose else logging.ERROR
     logging.basicConfig(level=log_level, format="%(asctime)s [%(levelname)s] %(message)s")
-    # Quiet Flask/werkzeug unless verbose
     for name in ("werkzeug", "flask.app"):
         logging.getLogger(name).setLevel(log_level)
     if not verbose:
-        # Disable tqdm bars in GUI mode to keep the terminal clean
         os.environ.setdefault("RALLYCLIP_NO_TQDM", "1")
-        # Suppress the Flask devserver banner
         try:
             import flask.cli  # type: ignore
             flask.cli.show_server_banner = lambda *args, **kwargs: None  # noqa: E731
         except Exception:
             pass
-    _sweep_old_jobs()
+    return verbose
+
+
+def _get_preferred_ports(port: Optional[int] = None) -> list[int]:
+    """Build list of preferred ports to try."""
     preferred_ports: list[int] = []
     env_port = os.environ.get("RALLYCLIP_GUI_PORT")
     if port:
@@ -617,14 +619,65 @@ def launch(port: Optional[int] = None) -> int:
         except ValueError:
             pass
     preferred_ports.extend([8000, 5173])
+    return preferred_ports
+
+
+def _launch_browser_mode(port: Optional[int] = None) -> int:
+    """Fallback: open in browser (original behavior for dev/testing)."""
+    _setup_logging()
+    _sweep_old_jobs()
+    preferred_ports = _get_preferred_ports(port)
     chosen_port = _pick_port(preferred_ports)
     threading.Thread(target=_safe_open_browser, args=(chosen_port,), daemon=True).start()
-    app.logger.info("Starting GUI on http://127.0.0.1:%s", chosen_port)
+    app.logger.info("Starting GUI on http://127.0.0.1:%s (browser mode)", chosen_port)
     try:
         app.run(host="127.0.0.1", port=chosen_port, debug=False, use_reloader=False, threaded=True)
     except Exception:  # pragma: no cover - runtime safety
         app.logger.exception("GUI server crashed")
         return 1
+    return 0
+
+
+def launch(port: Optional[int] = None) -> int:
+    """Launch the RallyClip GUI.
+    
+    Uses pywebview for a native window experience when available.
+    Falls back to opening in system browser for dev/testing.
+    """
+    # Try to import pywebview for native window
+    try:
+        import webview
+    except ImportError:
+        # Fallback to browser mode if pywebview not installed
+        return _launch_browser_mode(port)
+    
+    _setup_logging()
+    _sweep_old_jobs()
+    
+    preferred_ports = _get_preferred_ports(port)
+    chosen_port = _pick_port(preferred_ports)
+    
+    # Start Flask in background daemon thread
+    def run_flask():
+        app.run(host="127.0.0.1", port=chosen_port, debug=False, use_reloader=False, threaded=True)
+    
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    
+    # Give Flask a moment to start
+    time.sleep(0.5)
+    
+    # Create native window - this blocks until window is closed
+    window = webview.create_window(
+        'RallyClip',
+        f'http://127.0.0.1:{chosen_port}/',
+        width=1200,
+        height=800,
+        min_size=(900, 600),
+    )
+    webview.start()
+    
+    # Window closed - process exits cleanly
     return 0
 
 

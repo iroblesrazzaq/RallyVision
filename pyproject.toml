@@ -20,6 +20,7 @@ dependencies = [
   "scikit-learn>=1.7.1",
   "Flask>=2.3",
   "flask-cors>=4.0",
+  "pywebview>=5.0",
 ]
 
 [project.scripts]
