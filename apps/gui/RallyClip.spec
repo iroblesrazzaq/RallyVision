@@ -51,6 +51,9 @@ hiddenimports += [
     'PIL.Image',
 ]
 
+# pywebview for native window
+hiddenimports += collect_submodules('webview')
+
 # Collect data files
 datas = []
 

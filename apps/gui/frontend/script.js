@@ -532,6 +532,24 @@ class RallyClip {
     async downloadVideo() {
         if (!this.currentJobId) return;
 
+        // If running in pywebview, use native file save dialog
+        if (window.pywebview && window.pywebview.api) {
+            try {
+                const result = await window.pywebview.api.download_video(this.currentJobId);
+                if (result.success) {
+                    this.showSuccess('Video saved successfully!');
+                } else if (result.error !== 'Save cancelled') {
+                    this.showError(`Failed to save video: ${result.error}`);
+                }
+                // If cancelled, just do nothing (no error message)
+            } catch (error) {
+                console.error('Error downloading video:', error);
+                this.showError('Failed to save video');
+            }
+            return;
+        }
+
+        // Fallback to browser blob download (for dev/browser mode)
         try {
             const response = await fetch(`/api/download/video/${this.currentJobId}`);
             if (response.ok) {
@@ -549,6 +567,24 @@ class RallyClip {
     async downloadCsv() {
         if (!this.currentJobId) return;
 
+        // If running in pywebview, use native file save dialog
+        if (window.pywebview && window.pywebview.api) {
+            try {
+                const result = await window.pywebview.api.download_csv(this.currentJobId);
+                if (result.success) {
+                    this.showSuccess('CSV saved successfully!');
+                } else if (result.error !== 'Save cancelled') {
+                    this.showError(`Failed to save CSV: ${result.error}`);
+                }
+                // If cancelled, just do nothing (no error message)
+            } catch (error) {
+                console.error('Error downloading CSV:', error);
+                this.showError('Failed to save CSV');
+            }
+            return;
+        }
+
+        // Fallback to browser blob download (for dev/browser mode)
         try {
             const response = await fetch(`/api/download/csv/${this.currentJobId}`);
             if (response.ok) {
